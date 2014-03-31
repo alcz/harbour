@@ -602,6 +602,34 @@ static HB_ERRCODE sqlbaseRecId( SQLBASEAREAP pArea, PHB_ITEM pRecNo )
 }
 
 
+static HB_ERRCODE sqlbaseZap( SQLBASEAREAP pArea )
+{
+   HB_ULONG ulIndex;
+
+   for( ulIndex = 1; ulIndex <= pArea->ulRecCount; ulIndex++ )
+   {
+      if( pArea->pRowFlags[ ulIndex ] & SQLDD_FLAG_CACHED )
+      {
+         hb_itemRelease( ( PHB_ITEM ) pArea->pRow[ ulIndex ] );
+      }
+   }
+
+   pArea->ulRecCount = 0;
+   pArea->ulRecNo = 0;
+
+   pArea->pRow = ( void ** ) hb_xrealloc( pArea->pRow, SQLDD_ROWSET_RESIZE * sizeof( void * ) );
+   pArea->pRowFlags = ( HB_BYTE * ) hb_xrealloc( pArea->pRowFlags, SQLDD_ROWSET_RESIZE * sizeof( HB_BYTE ) );
+   pArea->ulRecMax = SQLDD_ROWSET_RESIZE;
+
+   pArea->pRecord = pArea->pRow[ 0 ];
+   pArea->bRecordFlags = pArea->pRowFlags[ 0 ];
+
+   pArea->fPositioned = HB_FALSE;
+
+   return SELF_GOTOP( ( AREAP ) pArea );
+}
+
+
 static HB_ERRCODE sqlbaseClose( SQLBASEAREAP pArea )
 {
    if( SELF_GOCOLD( ( AREAP ) pArea ) == HB_FAILURE )
@@ -1144,7 +1172,7 @@ static RDDFUNCS sqlbaseTable =
    ( DBENTRYP_VS ) NULL,             /* sqlbaseSort */
    ( DBENTRYP_VT ) NULL,             /* sqlbaseTrans */
    ( DBENTRYP_VT ) NULL,             /* sqlbaseTransRec */
-   ( DBENTRYP_V ) NULL,              /* sqlbaseZap */
+   ( DBENTRYP_V ) sqlbaseZap,
    ( DBENTRYP_VR ) NULL,             /* sqlbaseChildEnd */
    ( DBENTRYP_VR ) NULL,             /* sqlbaseChildStart */
    ( DBENTRYP_VR ) NULL,             /* sqlbaseChildSync */

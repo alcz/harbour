@@ -1482,6 +1482,34 @@ static HB_ERRCODE sqlmixGoHot( SQLMIXAREAP pArea )
 }
 
 
+static HB_ERRCODE sqlmixZap( SQLMIXAREAP pArea )
+{
+   PMIXTAG      pTagNew, pTag, pTagNext;
+
+   pTag = pArea->pTagList;
+   pArea->pTag = pArea->pTagList = NULL;
+
+   if( SUPER_ZAP( ( AREAP ) pArea ) == HB_FAILURE )
+      return HB_FAILURE;
+
+   pTagNew = hb_mixTagCreate( pTag->szName, pTag->szKeyExpr, pTag->pKeyItem, pTag->pForItem, NULL /* pTag->pWhileItem */, pTag->bType, pTag->uiKeyLen, pArea );
+   pArea->pTagList = pTagNew;
+   pTagNext = pTag->pNext;
+   hb_mixTagDestroy( pTag );
+
+   while( pTagNext )
+   {
+      pTag = pTagNext;
+      pTagNew->pNext = hb_mixTagCreate( pTag->szName, pTag->szKeyExpr, pTag->pKeyItem, pTag->pForItem, NULL /* pTag->pWhileItem */, pTag->bType, pTag->uiKeyLen, pArea );
+      pTagNew = pTagNew->pNext;
+      pTagNext = pTag->pNext;
+      hb_mixTagDestroy( pTag );
+   }
+
+   return HB_SUCCESS;
+}
+
+
 static HB_ERRCODE sqlmixClose( SQLMIXAREAP pArea )
 {
    if( SELF_GOCOLD( ( AREAP ) pArea ) == HB_FAILURE )
@@ -2026,7 +2054,7 @@ static RDDFUNCS sqlmixTable =
   ( DBENTRYP_VS ) NULL,                 /* sqlmixSort */
   ( DBENTRYP_VT ) NULL,                 /* sqlmixTrans */
   ( DBENTRYP_VT ) NULL,                 /* sqlmixTransRec */
-  ( DBENTRYP_V ) NULL,                  /* sqlmixZap */
+  ( DBENTRYP_V ) sqlmixZap,
   ( DBENTRYP_VR ) NULL,                 /* sqlmixChildEnd */
   ( DBENTRYP_VR ) NULL,                 /* sqlmixChildStart */
   ( DBENTRYP_VR ) NULL,                 /* sqlmixChildSync */
