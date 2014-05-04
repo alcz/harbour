@@ -372,7 +372,8 @@ static long s_srvRecvAll( PHB_CONSRV conn, void * buffer, long len )
          l = hb_socketRecv( conn->sd, ptr + lRead, len - lRead, 0, 1000 );
       if( l <= 0 )
       {
-         if( hb_socketGetError() != HB_SOCKET_ERR_TIMEOUT ||
+         if( l == 0 ||
+             hb_socketGetError() != HB_SOCKET_ERR_TIMEOUT ||
              hb_vmRequestQuery() != 0 ||
              ( end_timer != 0 && end_timer <= hb_dateMilliSeconds() ) )
             break;
@@ -746,11 +747,9 @@ static HB_BOOL s_netio_login_accept( PHB_CONSRV conn )
       }
       if( ! conn->login )
          s_consrv_disconnect( conn );
-
-      return conn->login;
    }
 
-   return HB_FALSE;
+   return conn && conn->login;
 }
 
 /* netio_VerifyClient( <pConnectionSocket> ) -> <lAccepted>
@@ -1450,11 +1449,6 @@ HB_FUNC( NETIO_SERVER )
             case NETIO_PROCW:
             case NETIO_FUNC:
             case NETIO_FUNCCTRL:
-               if( ! conn->rpc )
-               {
-                  errCode = NETIO_ERR_UNSUPPORTED;
-                  break;
-               }
                size = HB_GET_LE_UINT32( &msgbuf[ 4 ] );
                if( size < 2 )
                   errCode = NETIO_ERR_WRONG_PARAM;
@@ -1464,6 +1458,8 @@ HB_FUNC( NETIO_SERVER )
                      ptr = msg = ( HB_BYTE * ) hb_xgrab( size );
                   if( s_srvRecvAll( conn, msg, size ) != size )
                      errCode = NETIO_ERR_READ;
+                  else if( ! conn->rpc )
+                     errCode = NETIO_ERR_UNSUPPORTED;
                   else
                   {
                      const char * data = ( const char * ) msg;
