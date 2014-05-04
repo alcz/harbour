@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -326,7 +326,7 @@ static void open_handle( PHB_SET_STRUCT pSet, const char * file_name,
       else
          handle = hb_fileExtOpen( szFileName,
                                   hb_stackSetStruct()->HB_SET_DEFEXTENSIONS ? def_ext : NULL,
-                                  ( !fStripEof || set_specifier == HB_SET_PRINTFILE ? FO_WRITE : FO_READWRITE ) |
+                                  ( ! fStripEof || set_specifier == HB_SET_PRINTFILE ? FO_WRITE : FO_READWRITE ) |
                                   FO_DENYWRITE | FXO_SHARELOCK |
                                   ( fAppend ? FXO_APPEND : FXO_TRUNCATE ) |
                                   ( szDevice ? 0 : FXO_DEFAULTS ),
@@ -1054,6 +1054,7 @@ void hb_setInitialize( PHB_SET_STRUCT pSet )
    pSet->hb_set_century = HB_FALSE;
    pSet->hb_set_prndevice = HB_FALSE;
    pSet->HB_SET_COLOR = ( char * ) hb_xgrab( HB_CLRSTR_LEN + 1 );
+   /* NOTE: color must be synced with the one in IsDefColor() function */
    hb_strncpy( pSet->HB_SET_COLOR, "W/N,N/W,N/N,N/N,N/W", HB_CLRSTR_LEN );
    pSet->HB_SET_CONFIRM = HB_FALSE;
    pSet->HB_SET_CONSOLE = HB_TRUE;

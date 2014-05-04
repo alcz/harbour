@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -51,13 +51,14 @@
 #include "error.ch"
 #include "fileio.ch"
 #include "inkey.ch"
+#include "setcurs.ch"
 
 #ifndef __HARBOUR__
    #define hb_eol()     ( Chr( 13 ) + Chr( 10 ) )
    #define hb_ntos( n ) LTrim( Str( n ) )
 #endif
 
-#translate TEST_LINE( <x> ) => TEST_CALL( o, #<x>, {|| <x> } )
+#xtranslate TEST_LINE( <x> ) => TEST_CALL( o, #<x>, {|| <x> } )
 
 STATIC s_cTest := ""
 STATIC s_xVar := NIL
@@ -67,6 +68,7 @@ STATIC s_lRTEDetails
 STATIC s_lObjectDump
 
 PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
+
    LOCAL uNIL := NIL
    LOCAL nInt01 := 98
    LOCAL nInt02 := 0
@@ -87,6 +89,9 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    LOCAL nOldRow
    LOCAL nOldCol
 
+   LOCAL tmp1
+   LOCAL tmp2
+
    IF cArg01 == NIL
       cArg01 := ""
    ENDIF
@@ -101,8 +106,9 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    ENDIF
 
    Set( _SET_DATEFORMAT, "yyyy-mm-dd" )
+   SetCursor( SC_NONE )
 
-   // ;
+   //
 
    cCommandLine := cArg01 + " " + cArg02 + " " + cArg03 + " " + cArg04
 
@@ -110,12 +116,12 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    s_lRTEDetails := "RTEDETAILS" $ Upper( cCommandLine )
    s_lObjectDump := !( "NODUMP" $ Upper( cCommandLine ) )
 
-   // ;
+   //
 
    #ifdef __HARBOUR__
-      s_fhnd := FCreate( "tget_hb.txt", FC_NORMAL )
+      s_fhnd := FCreate( "tget_hb.txt" )
    #else
-      s_fhnd := FCreate( "tget_cl5.txt", FC_NORMAL )
+      s_fhnd := FCreate( "tget_cl5.txt" )
    #endif
 
    IF s_fhnd == F_ERROR
@@ -124,7 +130,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
 
    FWrite( s_fhnd, Set( _SET_DATEFORMAT ) + hb_eol() )
 
-   // ; Delimiter handling.
+   // Delimiter handling.
 
    SetColor( "B/N, RB/N" )
 
@@ -163,7 +169,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
 
    SetColor( "" )
 
-   // ; colorDisp / VarPut / display (::nDispLen recalc)
+   // colorDisp / VarPut / display (::nDispLen recalc)
 
    SetPos( 14, 16 ) ; o := _GET_( cStr03, "cStr03" )
    TEST_LINE( o:colorDisp( "GR/N" ) )
@@ -176,9 +182,9 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:display() )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr05, "cStr05",,, )
-   TEST_LINE( o:VarPut(Space(30)) )
+   TEST_LINE( o:VarPut( Space( 30 ) ) )
    TEST_LINE( o:display() )
-   TEST_LINE( o:VarPut(1) )
+   TEST_LINE( o:VarPut( 1 ) )
    TEST_LINE( o:VarGet() )
    TEST_LINE( o:VarPut("abcdefghijklm1234nopqrstuvwxyz") )
    TEST_LINE( o:setFocus() )
@@ -189,79 +195,79 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    nOldCol := o:col
    TEST_LINE( o:row := 50 )
    TEST_LINE( o:col := 80 )
-   TEST_LINE( o:VarPut(2) )
+   TEST_LINE( o:VarPut( 2 ) )
    TEST_LINE( o:VarGet() )
    TEST_LINE( o:VarPut("1234abcdefghijklmnopqrstuvwxyz") )
    TEST_LINE( o:updateBuffer() )
    TEST_LINE( o:row := nOldRow )
    TEST_LINE( o:col := nOldCol )
    TEST_LINE( o:killFocus() )
-   TEST_LINE( o:VarPut(4) )
+   TEST_LINE( o:VarPut( 4 ) )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr05, "cStr05",,, )
-   TEST_LINE( o:VarPut(Space(30)) )
+   TEST_LINE( o:VarPut( Space( 30 ) ) )
    TEST_LINE( o:display() )
-   TEST_LINE( o:VarPut(1) )
+   TEST_LINE( o:VarPut( 1 ) )
    TEST_LINE( o:VarGet() )
    TEST_LINE( o:VarPut("abcdefghijklm1234nopqrstuvwxyz") )
    TEST_LINE( o:setFocus() )
    TEST_LINE( o:assign() )
    TEST_LINE( o:VarPut("abcdefghijklmnopqrstuvwxyz1234") )
    TEST_LINE( o:updateBuffer() )
-   TEST_LINE( o:VarPut(2) )
+   TEST_LINE( o:VarPut( 2 ) )
    TEST_LINE( o:Type )
 
-   // ;
+   //
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut(Replicate( "a", 30 ) ) )
    TEST_LINE( o:display() )
-   TEST_LINE( o:VarPut(1) )
+   TEST_LINE( o:VarPut( 1 ) )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut( Replicate( "a", 30 ) ) )
    TEST_LINE( o:display() )
-   TEST_LINE( o:VarPut(Replicate("b", 20)) )
+   TEST_LINE( o:VarPut( Replicate( "b", 20 ) ) )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut( Replicate( "a", 30 ) ) )
    TEST_LINE( o:display() )
-   TEST_LINE( o:VarPut(NIL) )
-   TEST_LINE( o:VarPut(Replicate("b", 20)) )
-   TEST_LINE( o:VarPut({|| "" }) )
+   TEST_LINE( o:VarPut( NIL ) )
+   TEST_LINE( o:VarPut( Replicate( "b", 20 ) ) )
+   TEST_LINE( o:VarPut( {|| "" } ) )
    TEST_LINE( o:setFocus() )
-   TEST_LINE( o:VarPut({|| "" }) )
-   TEST_LINE( o:VarPut({}) )
-   TEST_LINE( o:VarPut(ErrorNew()) )
+   TEST_LINE( o:VarPut( {|| "" } ) )
+   TEST_LINE( o:VarPut( {} ) )
+   TEST_LINE( o:VarPut( ErrorNew() ) )
 
    cStr06 := ""
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut( Replicate( "a", 30 ) ) )
    TEST_LINE( o:setFocus() )
-   TEST_LINE( o:VarPut(1) )
+   TEST_LINE( o:VarPut( 1 ) )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut( Replicate( "a", 30 ) ) )
    TEST_LINE( o:setFocus() )
-   TEST_LINE( o:VarPut(Replicate("b", 20)) )
+   TEST_LINE( o:VarPut( Replicate( "b", 20 ) ) )
 
    SetPos( 14, 16 ) ; o := _GET_( cStr06, "cStr06",,, )
-   TEST_LINE( o:VarPut(Replicate("a", 30)) )
+   TEST_LINE( o:VarPut( Replicate( "a", 30 ) ) )
    TEST_LINE( o:setFocus() )
-   TEST_LINE( o:VarPut(NIL) )
-   TEST_LINE( o:VarPut(Replicate("b", 20)) )
+   TEST_LINE( o:VarPut( NIL ) )
+   TEST_LINE( o:VarPut( Replicate( "b", 20 ) ) )
    TEST_LINE( o:setFocus() )
    TEST_LINE( o:assign() )
 
-   // ; Minus
+   // Minus
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01", "9999.99",, )
    TEST_LINE( o:SetFocus() )
    TEST_LINE( o:Minus := .T. )
    TEST_LINE( o:Minus := .F. )
 
-   // ; Picture
+   // Picture
 
    SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01", "9999999999",, )
    TEST_LINE( o:Picture := "99" )
@@ -272,67 +278,67 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:Picture := "!!" )
    TEST_LINE( o:Picture := NIL )
 
-   // ; Picture "Y"
+   // Picture "Y"
 
    SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01", "Y",, )
    TEST_LINE( o:display() )
    TEST_LINE( o:setFocus() )
    TGetTOVS( o, { "NnYyAa" } )
 
-   // ; Assign
+   // Assign
 
    SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01", "9999999999",, )
    o:SetFocus()
    TEST_LINE( o:OverStrike( "z" ) )
    TEST_LINE( o:Assign() )
 
-   // ; Edmer #1
+   // Edmer #1
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@R   999 9999 999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@R  999  9999 999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@R  999 9999  999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   // ;
+   //
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@ER   999 9999 999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@ER  999  9999 999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   cStr07 := Space(10)
+   cStr07 := Space( 10 )
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "@ER  999 9999  999999",, )
    o:display()
    o:setFocus()
    TGetTOVS( o, { "1231234123456" } )
    TEST_LINE( o:Assign() )
 
-   // ; Edmer #2
+   // Edmer #2
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "9,999,999.99",, )
@@ -341,7 +347,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "12345" } )
    TEST_LINE( o:Assign() )
 
-   // ; Lorenzo/Przemek #1
+   // Lorenzo/Przemek #1
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@E 99.99",, )
@@ -357,7 +363,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "1" } )
    TEST_LINE( o:Assign() )
 
-   // ;
+   //
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@E 9,999,999.9999",, )
@@ -366,7 +372,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "12345" } )
    TEST_LINE( o:Assign() )
 
-   // ; EMG
+   // EMG
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@EZ 999,999.99",, )
@@ -375,7 +381,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "1", K_RIGHT } )
    TEST_LINE( o:Assign() )
 
-   // ;
+   //
 
    cStr07 := "12:34:56"
    SetPos( 14, 16 ) ; o := _GET_( cStr07, "cStr07", "99:99",, )
@@ -384,7 +390,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "78" } )
    TEST_LINE( o:Assign() )
 
-   // ;
+   //
 
    nInt02 := 1234.56
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@Z 9999999.9999",, )
@@ -398,7 +404,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:reset() )
    TEST_LINE( o:killFocus() )
 
-   // ; Quique
+   // Quique
 
    nInt02 := 198.12
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02",,, )
@@ -416,7 +422,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:setFocus() )
    TEST_LINE( o:display() )
 
-   // ; Mauricio and variations
+   // Mauricio and variations
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", ".99",, )
@@ -439,7 +445,23 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "12" } )
    TEST_LINE( o:Assign() )
 
-   // ; Overstrike/Insert
+   // Heinz V Bergen
+
+   SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@R 999-",, )
+   o:display()
+   o:setFocus()
+   TEST_LINE( o:OverStrike( "." ) )
+   TEST_LINE( o:OverStrike( "," ) )
+   TEST_LINE( o:OverStrike( "0" ) )
+
+   SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "@R 999-",, )
+   o:display()
+   o:setFocus()
+   TEST_LINE( o:Insert( "." ) )
+   TEST_LINE( o:Insert( "," ) )
+   TEST_LINE( o:Insert( "0" ) )
+
+   // Overstrike/Insert
 
    nInt02 := 0
    SetPos( 14, 16 ) ; o := _GET_( nInt02, "nInt02", "9999999999",, )
@@ -471,7 +493,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:Insert( "" ) )
    TEST_LINE( o:Assign() )
 
-   // ; Buffer
+   // Buffer
 
    s_xVar := "abcdefg"
    SetPos( 14, 16 ) ; o := _GET_( s_xVar, "s_xVar",,, )
@@ -484,7 +506,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:buffer := "1234567" )
    TEST_LINE( o:buffer := "abcdefg" )
 
-   // ; Clear
+   // Clear
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01", "9999.99",, )
    TEST_LINE( o:Clear := .T. )
@@ -500,7 +522,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:Clear := .F. )
    TEST_LINE( o:Clear := .T. )
 
-   // ; Minus
+   // Minus
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01", "9999.99",, )
    TEST_LINE( o:Minus := .T. )
@@ -516,7 +538,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:Minus := .F. )
    TEST_LINE( o:Minus := .T. )
 
-   // ; Changed
+   // Changed
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01", "9999.99",, )
    TEST_LINE( o:Changed := .T. )
@@ -532,7 +554,39 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:Changed := .F. )
    TEST_LINE( o:Changed := .T. )
 
-   // ; ColorSpec
+   // Intensity
+
+   tmp1 := Set( _SET_INTENSITY )
+   tmp2 := SetColor()
+
+   Set( _SET_INTENSITY, .F. )
+   SetColor( "GR+/B,N/W,B,RB,R/W" )
+   cStr01 := Space( 1 )
+   SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01" )
+   TEST_LINE( o:ColorSpec )
+
+   Set( _SET_INTENSITY, .T. )
+   SetColor( "GR+/B,N/W,B,RB,R/W" )
+   cStr01 := Space( 1 )
+   SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01" )
+   TEST_LINE( o:ColorSpec )
+
+   Set( _SET_INTENSITY, .F. )
+   SetColor( "W/N,N/W,N/N,N/N,N/W" )
+   cStr01 := Space( 1 )
+   SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01" )
+   TEST_LINE( o:ColorSpec )
+
+   Set( _SET_INTENSITY, .T. )
+   SetColor( "W/N,N/W,N/N,N/N,N/W" )
+   cStr01 := Space( 1 )
+   SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01" )
+   TEST_LINE( o:ColorSpec )
+
+   Set( _SET_INTENSITY, tmp1 )
+   SetColor( tmp2 )
+
+   // ColorSpec
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01",,, )
    o:ColorSpec := "BG/RB,RG+/B" ; TEST_LINE( o:ColorSpec := NIL )
@@ -585,7 +639,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    o:ColorSpec := "BG/RB,RG+/B,N/GR,W+/R" ; TEST_LINE( o:ColorSpec := "N/G,hkjhkj" )
    o:ColorSpec := "BG/RB,RG+/B,N/GR,W+/R" ; TEST_LINE( o:ColorSpec := "n/g,n/bg" )
 
-   // ; Pos
+   // Pos
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01", "9999.99",, )
    o:SetFocus()
@@ -638,10 +692,10 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:SetFocus() )
    TEST_LINE( o:Pos := 1 )
 
-   // ; Error conditions
+   // Error conditions
 
    TGetAssign( NIL )
-// TGetAssign( -1 ) // ; CA-Cl*pper has too many differences due to the low level implementation here
+// TGetAssign( -1 ) // CA-Cl*pper has too many differences due to the low level implementation here
    TGetAssign( 0 )
    TGetAssign( 1 )
    TGetAssign( 3 )
@@ -657,7 +711,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetAssign( {} )
    TGetAssign( { "" } )
 
-   // ; Type change N -> C
+   // Type change N -> C
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01" )
    TEST_LINE( OBJ_CREATE() )
@@ -666,7 +720,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:block := {| h | LogMe( PCount(), h ), iif( PCount() == 0, cStr01, cStr01 := h ) } )
    TEST_LINE( o:SetFocus() )
 
-   // ; Reform
+   // Reform
 
    SetPos( 14, 16 ) ; o := _GET_( cStr01, "cStr01" )
    TEST_LINE( OBJ_CREATE() )
@@ -677,7 +731,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TEST_LINE( o:picture := "!!!!AAAA" )
    TEST_LINE( o:Reform() )
 
-   // ; Minus
+   // Minus
 
    SetPos( 14, 16 ) ; o := _GET_( nInt01, "nInt01" )
    TEST_LINE( OBJ_CREATE() )
@@ -690,7 +744,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    o:minus := .T.
    TEST_LINE( o:SetFocus() )
 
-   // ;
+   //
 
    SET CENTURY ON
 
@@ -752,7 +806,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
    TGetTOVS( o, { "12345678" } )
    TEST_LINE( o:KillFocus() )
 
-   // ; Exercises
+   // Exercises
 
    TGetTest( 98, NIL )
    TGetTest( 98, "99999" )
@@ -780,7 +834,7 @@ PROCEDURE Main( cArg01, cArg02, cArg03, cArg04 )
 
    RETURN
 
-PROCEDURE TGetTOVS( o, aKeys, lInsert )
+STATIC PROCEDURE TGetTOVS( o, aKeys, lInsert )
    LOCAL tmp, tmp1
 
    IF !( ValType( lInsert ) == "L" )
@@ -818,10 +872,12 @@ PROCEDURE TGetTOVS( o, aKeys, lInsert )
 
    RETURN
 
-FUNCTION TGetTIns( o, aKeys )
+#ifdef _COMMENT_
+STATIC FUNCTION TGetTIns( o, aKeys )
    RETURN TGetTOVS( o, aKeys, .T. )
+#endif
 
-PROCEDURE TGetAssign( xVar )
+STATIC PROCEDURE TGetAssign( xVar )
    LOCAL o
    LOCAL nInt01 := 76
    LOCAL cStr01 := "AbC DeF 974"
@@ -1392,13 +1448,13 @@ PROCEDURE TGetAssign( xVar )
 
    RETURN
 
-PROCEDURE TGetTest( xVar, cPic )
+STATIC PROCEDURE TGetTest( xVar, cPic )
    LOCAL bOldBlock
    LOCAL o
 
    s_xVar := xVar
 
-   // ; Display
+   // Display
 
    s_cTest := "Display Var: " + ValType( xVar ) + " Pic: " + iif( cPic == NIL, "(none)", cPic )
 
@@ -1406,7 +1462,7 @@ PROCEDURE TGetTest( xVar, cPic )
    TEST_LINE( OBJ_CREATE() )
    TEST_LINE( o:Display() )
 
-   // ; In focus
+   // In focus
 
    s_cTest := "InFocus Var: " + ValType( xVar ) + " Pic: " + iif( cPic == NIL, "(none)", cPic )
 
@@ -1426,7 +1482,7 @@ PROCEDURE TGetTest( xVar, cPic )
    TEST_LINE( o:Display() )
    TEST_LINE( o:KillFocus() )
 
-   // ; Not in focus
+   // Not in focus
 
    s_cTest := "NotFocus Var: " + ValType( xVar ) + " Pic: " + iif( cPic == NIL, "(none)", cPic )
 
@@ -1445,7 +1501,7 @@ PROCEDURE TGetTest( xVar, cPic )
    TEST_LINE( o:Display() )
    TEST_LINE( o:KillFocus() )
 
-   // ; In Focus editing
+   // In Focus editing
 
    s_cTest := "InFocus #2 Var: " + ValType( xVar ) + " Pic: " + iif( cPic == NIL, "(none)", cPic )
 
@@ -1473,7 +1529,7 @@ PROCEDURE TGetTest( xVar, cPic )
    TEST_LINE( o:Undo(.T.) )
    TEST_LINE( o:KillFocus() )
 
-   // ;
+   //
 
    s_xVar := xVar
 
@@ -1502,18 +1558,18 @@ PROCEDURE TGetTest( xVar, cPic )
    TEST_LINE( o:Undo(.T.) )
    TEST_LINE( o:KillFocus() )
 
-   // ;
+   //
 
    s_cTest := ""
 
    RETURN
 
-PROCEDURE TEST_CALL( o, cBlock, bBlock )
+STATIC PROCEDURE TEST_CALL( o, cBlock, bBlock )
    LOCAL xResult
    LOCAL bOldError
    LOCAL oError
 
-   SetPos( 0, 0 ) // ; To check where the cursor was moved after evaluating the block.
+   SetPos( 0, 0 ) // To check where the cursor was moved after evaluating the block.
 
    bOldError := ErrorBlock( {| oError | oError:cargo := CallStack(), Break( oError ) } )
 
@@ -1529,7 +1585,7 @@ PROCEDURE TEST_CALL( o, cBlock, bBlock )
 
    RETURN
 
-FUNCTION CallStack()
+STATIC FUNCTION CallStack()
    LOCAL tmp := 1
    LOCAL cString := ""
 
@@ -1540,7 +1596,7 @@ FUNCTION CallStack()
 
    RETURN RTrim( cString )
 
-PROCEDURE LogMe( nPCount, data, desc )
+STATIC PROCEDURE LogMe( nPCount, data, desc )
    LOCAL nLevel
    LOCAL cStack
 
@@ -1569,7 +1625,7 @@ PROCEDURE LogMe( nPCount, data, desc )
 
    RETURN
 
-PROCEDURE LogGETVars( o, desc, xResult )
+STATIC PROCEDURE LogGETVars( o, desc, xResult )
    LOCAL nLevel
    LOCAL cStack
 
@@ -1644,7 +1700,7 @@ PROCEDURE LogGETVars( o, desc, xResult )
 
    RETURN
 
-FUNCTION XToStr( xValue )
+STATIC FUNCTION XToStr( xValue )
    LOCAL cType := ValType( xValue )
 
    DO CASE
@@ -1663,14 +1719,14 @@ FUNCTION XToStr( xValue )
    CASE cType == "L" ; RETURN iif( xValue, ".T.", ".F." )
    CASE cType == "O" ; RETURN xValue:className() + " Object"
    CASE cType == "U" ; RETURN "NIL"
-   CASE cType == "B" ; RETURN '{||...} -> ' + XToStr( Eval( xValue ) )
-   CASE cType == "A" ; RETURN '{ ' + ArrayToList( xValue ) + ' }'
+   CASE cType == "B" ; RETURN "{||...} -> " + XToStr( Eval( xValue ) )
+   CASE cType == "A" ; RETURN "{ " + ArrayToList( xValue ) + " }"
    CASE cType == "M" ; RETURN 'M:"' + xValue + '"'
    ENDCASE
 
    RETURN ""
 
-FUNCTION ArrayToList( a )
+STATIC FUNCTION ArrayToList( a )
    LOCAL tmp
    LOCAL cString := ""
 
@@ -1683,7 +1739,7 @@ FUNCTION ArrayToList( a )
 
    RETURN cString
 
-FUNCTION XToStrE( xValue )
+STATIC FUNCTION XToStrE( xValue )
    LOCAL cType := ValType( xValue )
 
    DO CASE
@@ -1702,14 +1758,14 @@ FUNCTION XToStrE( xValue )
    CASE cType == "L" ; RETURN iif( xValue, ".T.", ".F." )
    CASE cType == "O" ; RETURN xValue:className() + " Object"
    CASE cType == "U" ; RETURN "NIL"
-   CASE cType == "B" ; RETURN '{||...} -> ' + XToStr( Eval( xValue ) )
-   CASE cType == "A" ; RETURN '{ ' + ArrayToList( xValue ) + ' }'
-   CASE cType == "M" ; RETURN 'M:' + xValue
+   CASE cType == "B" ; RETURN "{||...} -> " + XToStr( Eval( xValue ) )
+   CASE cType == "A" ; RETURN "{ " + ArrayToList( xValue ) + " }"
+   CASE cType == "M" ; RETURN "M:" + xValue
    ENDCASE
 
    RETURN ""
 
-FUNCTION XToStrX( xValue )
+STATIC FUNCTION XToStrX( xValue )
    LOCAL cType := ValType( xValue )
 
    LOCAL tmp
@@ -1731,10 +1787,10 @@ FUNCTION XToStrX( xValue )
    CASE cType == "L" ; RETURN iif( xValue, ".T.", ".F." )
    CASE cType == "O" ; RETURN xValue:className() + " Object"
    CASE cType == "U" ; RETURN "NIL"
-   CASE cType == "B" ; RETURN '{||...} -> ' + XToStrX( Eval( xValue ) )
+   CASE cType == "B" ; RETURN "{||...} -> " + XToStrX( Eval( xValue ) )
    CASE cType == "A"
 
-      cRetVal := '{ '
+      cRetVal := "{ "
 
       FOR tmp := 1 TO Len( xValue )
          cRetVal += XToStrX( xValue[ tmp ] )
@@ -1743,9 +1799,9 @@ FUNCTION XToStrX( xValue )
          ENDIF
       NEXT
 
-      RETURN cRetVal + ' }'
+      RETURN cRetVal + " }"
 
-   CASE cType == "M" ; RETURN 'M:' + xValue
+   CASE cType == "M" ; RETURN "M:" + xValue
    ENDCASE
 
    RETURN ""
@@ -1819,7 +1875,7 @@ STATIC FUNCTION ErrorMessage( oError )
    RETURN cMessage
 
 #ifdef __XPP__
-FUNCTION hb_SToD( cDate )
+STATIC FUNCTION hb_SToD( cDate )
    RETURN SToD( cDate )
 #endif
 
@@ -1827,11 +1883,11 @@ FUNCTION hb_SToD( cDate )
 #ifndef __HARBOUR__
 #ifndef __XPP__
 
-FUNCTION hb_SToD( s )
+STATIC FUNCTION hb_SToD( s )
 
-   LOCAL cDf := Set( _SET_DATEFORMAT, "YYYY/MM/DD" ), dt
+   LOCAL cDf := Set( _SET_DATEFORMAT, "yyyy-mm-dd" ), dt
 
-   dt := CToD( Stuff( Stuff( s, 7, 0, "/" ), 5, 0, "/" ) )
+   dt := CToD( Stuff( Stuff( s, 7, 0, "-" ), 5, 0, "-" ) )
    Set( _SET_DATEFORMAT, cDf )
 
    RETURN dt
@@ -1840,8 +1896,8 @@ FUNCTION hb_SToD( s )
 #endif
 #endif
 
-PROCEDURE OBJ_CREATE()
+STATIC PROCEDURE OBJ_CREATE()
 
-   // ; Dummy
+   // Dummy
 
    RETURN
