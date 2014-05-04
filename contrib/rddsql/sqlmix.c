@@ -1481,30 +1481,13 @@ static HB_ERRCODE sqlmixGoHot( SQLMIXAREAP pArea )
    return HB_SUCCESS;
 }
 
-
 static HB_ERRCODE sqlmixZap( SQLMIXAREAP pArea )
 {
-   PMIXTAG      pTagNew, pTag, pTagNext;
-
-   pTag = pArea->pTagList;
-   pArea->pTag = pArea->pTagList = NULL;
+   if( SELF_ORDLSTCLEAR( ( AREAP ) pArea ) == HB_FAILURE )
+      return HB_FAILURE;
 
    if( SUPER_ZAP( ( AREAP ) pArea ) == HB_FAILURE )
       return HB_FAILURE;
-
-   pTagNew = hb_mixTagCreate( pTag->szName, pTag->szKeyExpr, pTag->pKeyItem, pTag->pForItem, NULL /* pTag->pWhileItem */, pTag->bType, pTag->uiKeyLen, pArea );
-   pArea->pTagList = pTagNew;
-   pTagNext = pTag->pNext;
-   hb_mixTagDestroy( pTag );
-
-   while( pTagNext )
-   {
-      pTag = pTagNext;
-      pTagNew->pNext = hb_mixTagCreate( pTag->szName, pTag->szKeyExpr, pTag->pKeyItem, pTag->pForItem, NULL /* pTag->pWhileItem */, pTag->bType, pTag->uiKeyLen, pArea );
-      pTagNew = pTagNew->pNext;
-      pTagNext = pTag->pNext;
-      hb_mixTagDestroy( pTag );
-   }
 
    return HB_SUCCESS;
 }
