@@ -3880,6 +3880,16 @@ void * hb_gtCreate( const char * szGtName,
          hb_gtInit( hFilenoStdin, hFilenoStdout, hFilenoStderr );
       }
    }
+   else if( !szGtName || hb_stricmp( szGtName, "nul" ) == 0 ||
+             hb_stricmp( szGtName, "null" ) == 0 )
+   {
+      PHB_GT pGT = hb_gtLoad( "NUL", NULL, NULL );
+      if( pGT )
+      {
+         hb_stackSetGT( pGT );
+         hb_gtInit( hFilenoStdin, hFilenoStdout, hFilenoStderr );
+      }
+   }
    return hb_gtSwap( hCurrGT );
 }
 
