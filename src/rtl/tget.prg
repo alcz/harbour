@@ -273,7 +273,7 @@ METHOD display() CLASS Get
 
       /* Display "-." only in case when value on the left side of
          the decimal point is equal 0 */
-      cBuffer := Left( cBuffer, ::decPos - 2 ) + "-." + SubStr( cBuffer, ::decPos + 1 )
+      cBuffer := Stuff( cBuffer, ::decPos - 1, 2, "-." )
    ENDIF
 
    IF ::nDispLen != ::nMaxLen .AND. ::nPos != 0 /* has scroll? */
@@ -324,8 +324,8 @@ METHOD display() CLASS Get
    IF ! ::lSuppDisplay .OR. nDispPos != ::nOldPos
 
       hb_DispOutAt( ::nRow, ::nCol, ;
-         iif( ::lHideInput, PadR( Replicate( SubStr( ::cStyle, 1, 1 ), Len( RTrim( cBuffer ) ) ), ::nDispLen ), SubStr( cBuffer, nDispPos, ::nDispLen ) ), ;
-         hb_ColorIndex( ::cColorSpec, iif( ::hasFocus, GET_CLR_ENHANCED, GET_CLR_UNSELECTED ) ) )
+                    iif( ::lHideInput, PadR( Replicate( Left( ::cStyle, 1 ), Len( RTrim( cBuffer ) ) ), ::nDispLen ), SubStr( cBuffer, nDispPos, ::nDispLen ) ), ;
+                    hb_ColorIndex( ::cColorSpec, iif( ::hasFocus, GET_CLR_ENHANCED, GET_CLR_UNSELECTED ) ) )
 
       nRowPos := ::nRow
       nColPos := ::nCol + Min( ::nDispLen, Len( cBuffer ) )
@@ -594,7 +594,8 @@ METHOD overStrike( cChar ) CLASS Get
             IF ::nPos > ::nMaxEdit
                ::pos := ::FirstEditable()
             ENDIF
-            ::cBuffer := Left( ::cBuffer, ::nPos - 1 ) + cChar + SubStr( ::cBuffer, ::nPos + 1 )
+
+            ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChar )
 
             ::lChanged := .T.
 
@@ -659,14 +660,10 @@ METHOD insert( cChar ) CLASS Get
                   ENDIF
                NEXT
                nMaxEdit := nFor
-               ::cBuffer := ;
-                  Left( Left( ::cBuffer, ::nPos - 1 ) + cChar +;
-                  SubStr( ::cBuffer, ::nPos, nMaxEdit - 1 - ::nPos ) +;
-                  SubStr( ::cBuffer, nMaxEdit ), ::nMaxLen )
+               ::cBuffer := Left( Stuff( Left( ::cBuffer, nMaxEdit - 2 ), ::nPos, 0, cChar ) + ;
+                                  SubStr( ::cBuffer, nMaxEdit ), ::nMaxLen )
             ELSE
-               ::cBuffer := ;
-                  Left( Left( ::cBuffer, ::nPos - 1 ) + cChar + ;
-                  SubStr( ::cBuffer, ::nPos ), ::nMaxEdit )
+               ::cBuffer := Left( Stuff( ::cBuffer, ::nPos, 0, cChar ), ::nMaxEdit )
             ENDIF
 
             ::lChanged := .T.
@@ -1180,12 +1177,11 @@ METHOD PutMask( xValue, lEdit ) CLASS Get
       ENDIF
    ENDIF
 
-   cBuffer := ;
-      Transform( xValue, ;
-       iif( Empty( cPicFunc ), ;
-                     iif( ::lPicBlankZero .AND. ! ::hasFocus, "@Z ", "" ), ;
-          cPicFunc + iif( ::lPicBlankZero .AND. ! ::hasFocus, "Z"  , "" ) + " " ) ;
-       + cPicMask )
+   cBuffer := Transform( xValue, ;
+                         iif( Empty( cPicFunc ), ;
+                              iif( ::lPicBlankZero .AND. ! ::hasFocus, "@Z ", "" ), ;
+                              cPicFunc + iif( ::lPicBlankZero .AND. ! ::hasFocus, "Z"  , "" ) + " " ) + ;
+                         cPicMask )
 
    IF ::cType == "N"
       IF ( "(" $ cPicFunc .OR. ")" $ cPicFunc ) .AND. xValue >= 0
@@ -1211,7 +1207,9 @@ METHOD PutMask( xValue, lEdit ) CLASS Get
             IF "E" $ cPicFunc
                cChar := iif( cChar == ",", ".", "," )
             ENDIF
-            cBuffer := Left( cBuffer, nFor - 1 ) + cChar + SubStr( cBuffer, nFor + 1 )
+
+            cBuffer := Stuff( cBuffer, nFor, 1, cChar )
+
          ENDIF
       NEXT
       IF ::lEdit .AND. Empty( xValue )
@@ -1298,15 +1296,13 @@ METHOD unTransform() CLASS Get
                NEXT
             ELSE
                IF "E" $ ::cPicFunc
-                  cBuffer := ;
-                     Left( cBuffer, ::FirstEditable() - 1 ) + ;
-                     hb_StrReplace( SubStr( cBuffer, ::FirstEditable(), ::LastEditable() - ::FirstEditable() + 1 ), ".,", " ." ) + ;
-                     SubStr( cBuffer, ::LastEditable() + 1 )
+                  cBuffer := Left( cBuffer, ::FirstEditable() - 1 ) + ;
+                             hb_StrReplace( SubStr( cBuffer, ::FirstEditable(), ::LastEditable() - ::FirstEditable() + 1 ), ".,", " ." ) + ;
+                             SubStr( cBuffer, ::LastEditable() + 1 )
                ELSE
-                  cBuffer := ;
-                     Left( cBuffer, ::FirstEditable() - 1 ) + ;
-                           StrTran( SubStr( cBuffer, ::FirstEditable(), ::LastEditable() - ::FirstEditable() + 1 ), ",", " " ) + ;
-                     SubStr( cBuffer, ::LastEditable() + 1 )
+                  cBuffer := Left( cBuffer, ::FirstEditable() - 1 ) + ;
+                             StrTran( SubStr( cBuffer, ::FirstEditable(), ::LastEditable() - ::FirstEditable() + 1 ), ",", " " ) + ;
+                             SubStr( cBuffer, ::LastEditable() + 1 )
                ENDIF
 
                lHasDec := .F.
@@ -1607,9 +1603,7 @@ METHOD backSpaceLow() CLASS Get
       IF ( nMinus := At( "(", Left( ::cBuffer, nPos - 1 ) ) ) > 0 .AND. ;
          !( SubStr( ::cPicMask, nMinus, 1 ) == "(" )
 
-         ::cBuffer := ;
-            Left( ::cBuffer, nMinus - 1 ) + " " + ;
-            SubStr( ::cBuffer, nMinus + 1 )
+         ::cBuffer := Stuff( ::cBuffer, nMinus, 1, " " )
 
          ::lEdit := .T.
          ::lChanged := .T.
@@ -1649,10 +1643,8 @@ METHOD deleteLow() CLASS Get
       ::lMinus2 := .F.
    ENDIF
 
-   ::cBuffer := ;
-      PadR( Left( ::cBuffer, ::nPos - 1 ) + ;
-      SubStr( ::cBuffer, ::nPos + 1, nMaxLen - ::nPos ) + " " + ;
-      SubStr( ::cBuffer, nMaxLen + 1 ), ::nMaxLen )
+   ::cBuffer := PadR( Stuff( Stuff( ::cBuffer, ::nPos, 1, "" ), nMaxLen, 0, " " ), ;
+                      ::nMaxLen )
 
    ::lChanged := .T.
 
