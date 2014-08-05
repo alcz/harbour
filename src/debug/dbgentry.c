@@ -1,9 +1,7 @@
 /*
- * xHarbour Project source code:
  * Debugger entry routine
  *
  * Copyright 2005 Phil Krylov <phil a t newstar.rinet.ru>
- * www - http://www.xharbour.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -194,7 +192,6 @@ static void     hb_dbgAddVar( int * nVars, HB_VARINFO ** aVars, const char * szN
 static void     hb_dbgAddStopLines( PHB_ITEM pItem );
 static void     hb_dbgEndProc( HB_DEBUGINFO * info );
 static PHB_ITEM hb_dbgEval( HB_DEBUGINFO * info, HB_WATCHPOINT * watch );
-static PHB_ITEM hb_dbgEvalMacro( const char * szExpr, PHB_ITEM pItem );
 static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch );
 static PHB_ITEM hb_dbgEvalResolve( HB_DEBUGINFO * info, HB_WATCHPOINT * watch );
 static HB_BOOL  hb_dbgIsAltD( void );
@@ -372,8 +369,7 @@ void hb_dbgEntry( int nMode, int nLine, const char * szName, int nIndex, PHB_ITE
    {
       if( ! info )
       {
-         info = *infoPtr = ( HB_DEBUGINFO * ) hb_xgrab( sizeof( HB_DEBUGINFO ) );
-         memset( info, 0, sizeof( HB_DEBUGINFO ) );
+         info = *infoPtr = ( HB_DEBUGINFO * ) hb_xgrabz( sizeof( HB_DEBUGINFO ) );
          info->bCBTrace = HB_TRUE;
       }
       else if( info->bInside || info->bQuit )
@@ -444,14 +440,15 @@ void hb_dbgEntry( int nMode, int nLine, const char * szName, int nIndex, PHB_ITE
             PHB_ITEM xValue;
 
             xValue = hb_dbgEval( info, &info->aWatch[ tp->nIndex ] );
-            if( ! xValue )
-               xValue = hb_itemNew( NULL );
 
-            if( HB_ITEM_TYPE( xValue ) != HB_ITEM_TYPE( tp->xValue ) ||
-                ! hb_dbgEqual( xValue, tp->xValue ) )
+            if( ! ( xValue == NULL && tp->xValue == NULL ) &&
+                ( xValue == NULL || tp->xValue == NULL ||
+                  HB_ITEM_TYPE( xValue ) != HB_ITEM_TYPE( tp->xValue ) ||
+                  ! hb_dbgEqual( xValue, tp->xValue ) ) )
             {
-               hb_itemCopy( tp->xValue, xValue );
-               hb_itemRelease( xValue );
+               if( tp->xValue )
+                  hb_itemRelease( tp->xValue );
+               tp->xValue = xValue;
 
                pTop->nLine = nLine;
                info->nProcLevel = nProcLevel - ( hb_dbgIsAltD() ? 2 : 0 );
@@ -468,7 +465,8 @@ void hb_dbgEntry( int nMode, int nLine, const char * szName, int nIndex, PHB_ITE
                hb_dbgActivate( info );
                return;
             }
-            hb_itemRelease( xValue );
+            if( xValue )
+               hb_itemRelease( xValue );
          }
          hb_clsSetScope( bOldClsScope );
 
@@ -763,7 +761,7 @@ static void hb_dbgAddStopLines( PHB_ITEM pItem )
                HB_ISIZ k;
                char * pBuffer = ( char * ) hb_xgrab( nLen + 1 );
 
-               hb_xmemset( pBuffer, 0, nLen );
+               hb_xmemset( pBuffer, 0, nLen + 1 );
 
                /* the bitfields with line numbers should use
                 * 8bit alignment so it's safe to use byte copy
@@ -1067,10 +1065,8 @@ static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch )
          char * szWord;
 
          while( c && IS_IDENT_CHAR( c ) )
-         {
-            j++;
-            c = watch->szExpr[ j ];
-         }
+            c = watch->szExpr[ ++j ];
+
          nLen = j - i;
          i = j;
          if( c )
@@ -1078,7 +1074,8 @@ static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch )
             while( watch->szExpr[ i ] == ' ' )
                i++;
 
-            if( watch->szExpr[ i ] == '(' )
+            if( watch->szExpr[ i ] == '(' ||
+                ( nLen == 1 && i == j && watch->szExpr[ i ] == '"' ) )
                continue;
 
             if( watch->szExpr[ i ] == '-' && watch->szExpr[ i + 1 ] == '>' )
@@ -1098,9 +1095,9 @@ static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch )
       }
       if( c == '.' )
       {
-         if( watch->szExpr[ i + 1 ]
-             && strchr( "TtFf", watch->szExpr[ i + 1 ] )
-             && watch->szExpr[ i + 2 ] == '.' )
+         if( watch->szExpr[ i + 1 ] &&
+             strchr( "TtFf", watch->szExpr[ i + 1 ] ) &&
+             watch->szExpr[ i + 2 ] == '.' )
          {
             i += 3;
          }
@@ -1108,8 +1105,8 @@ static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch )
          {
             i += 4;
          }
-         else if( ! hb_strnicmp( watch->szExpr + i + 1, "AND.", 4 )
-                  || ! hb_strnicmp( watch->szExpr + i + 1, "NOT.", 4 ) )
+         else if( ! hb_strnicmp( watch->szExpr + i + 1, "AND.", 4 ) ||
+                  ! hb_strnicmp( watch->szExpr + i + 1, "NOT.", 4 ) )
          {
             i += 5;
          }
@@ -1120,9 +1117,9 @@ static PHB_ITEM hb_dbgEvalMakeBlock( HB_WATCHPOINT * watch )
          bAfterId = HB_FALSE;
          continue;
       }
-      if( c == ':'
-          || ( c == '-' && watch->szExpr[ i + 1 ] == '>'
-               && IS_IDENT_START( watch->szExpr[ i + 2 ] ) ) )
+      if( c == ':' ||
+          ( c == '-' && watch->szExpr[ i + 1 ] == '>' &&
+            IS_IDENT_START( watch->szExpr[ i + 2 ] ) ) )
       {
          if( c == ':' && watch->szExpr[ i + 1 ] == ':' )
          {
@@ -1348,13 +1345,23 @@ PHB_ITEM hb_dbgGetExpressionValue( void * handle, const char * expression )
 }
 
 
+PHB_ITEM hb_dbgGetWatchValue( void * handle, int nWatch )
+{
+   HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle;
+
+   return hb_dbgEval( info, &( info->aWatch[ nWatch ] ) );
+}
+
+
 PHB_ITEM hb_dbgGetSourceFiles( void * handle )
 {
    PHB_ITEM ret;
    HB_ISIZ nModules;
    HB_ISIZ i;
 
-   /* HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle; */
+#if 0
+   HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle;
+#endif
    HB_SYMBOL_UNUSED( handle );
 
    HB_DBGCOMMON_LOCK();
@@ -1365,14 +1372,6 @@ PHB_ITEM hb_dbgGetSourceFiles( void * handle )
    HB_DBGCOMMON_UNLOCK();
 
    return ret;
-}
-
-
-PHB_ITEM hb_dbgGetWatchValue( void * handle, int nWatch )
-{
-   HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle;
-
-   return hb_dbgEval( info, &( info->aWatch[ nWatch ] ) );
 }
 
 
@@ -1408,7 +1407,9 @@ HB_BOOL hb_dbgIsValidStopLine( void * handle, const char * szModule, int nLine )
    HB_ISIZ nModules;
    HB_ISIZ i;
 
-   /* HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle; */
+#if 0
+   HB_DEBUGINFO * info = ( HB_DEBUGINFO * ) handle;
+#endif
    HB_SYMBOL_UNUSED( handle );
 
    szModule = hb_dbgStripModuleName( szModule );
