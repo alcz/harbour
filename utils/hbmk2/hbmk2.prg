@@ -813,22 +813,21 @@ STATIC PROCEDURE hbmk_local_entry( ... )
 
       /* Exit on first failure */
       IF nResult != _EXIT_OK
-         EXIT
+         IF lExitStr
+            OutErr( hb_StrFormat( _SELF_NAME_ + iif( ! Empty( cTargetName ), "[" + cTargetName + "]", "" ) + ;
+                                  ": " + I_( "Exit code: %1$d: %2$s" ), nResult, ExitCodeStr( nResult ) ) + _OUT_EOL )
+         ENDIF
+         IF nResult != _EXIT_STOP
+            IF lPause
+               OutStd( I_( "Press any key to continue..." ) )
+               Inkey( 0 )
+            ENDIF
+            EXIT
+         ENDIF
       ENDIF
 
       ++nTargetTO_DO
    ENDDO
-
-   IF nResult != _EXIT_OK
-      IF lExitStr
-         OutErr( hb_StrFormat( _SELF_NAME_ + iif( ! Empty( cTargetName ), "[" + cTargetName + "]", "" ) + ;
-                               ": " + I_( "Exit code: %1$d: %2$s" ), nResult, ExitCodeStr( nResult ) ) + _OUT_EOL )
-      ENDIF
-      IF lPause
-         OutStd( I_( "Press any key to continue..." ) )
-         Inkey( 0 )
-      ENDIF
-   ENDIF
 
    ErrorLevel( nResult )
 
@@ -5242,9 +5241,12 @@ STATIC FUNCTION __hbmk( aArgs, nArgTarget, nLevel, /* @ */ lPause, /* @ */ lExit
          IF ! HBMK_ISCOMP( "icc|iccia64" )
             cBin_Res := "rc.exe"
             cOpt_Res := "{FR} -fo {OS} {IR}"
+#if 0
+            /* NOTE: Compiler version is not enough to detect supported parameters when Platform SDK rc.exe is used. */
             IF hbmk[ _HBMK_nCOMPVer ] >= 1600
                cOpt_Res := "-nologo " + cOpt_Res  /* NOTE: Only in MSVC 2010 and upper. [vszakats] */
             ENDIF
+#endif
             cResExt := ".res"
          ENDIF
 
@@ -11396,7 +11398,8 @@ STATIC FUNCTION HBM_Load( hbmk, aParams, cFileName, nNestingLevel, lProcHBP, cPa
                               aArgs := AClone( hbmk[ _HBMK_aArgs ] )
                               aArgs[ hbmk[ _HBMK_nArgTarget ] ] := cHBP
                               nResult := __hbmk( aArgs, hbmk[ _HBMK_nArgTarget ], hbmk[ _HBMK_nLevel ] + 1, @hbmk[ _HBMK_lPause ] )
-                              IF nResult != 0
+                              IF nResult != _EXIT_OK .AND. ;
+                                 nResult != _EXIT_STOP
                                  RETURN nResult
                               ENDIF
                            ELSE

@@ -131,6 +131,7 @@ void hb_adsOemAnsiFree( char * pszSrc )
 typedef struct
 {
    ADSHANDLE hConnect;
+   int iIndexPageSize;
 #if ! defined( ADS_LINUX )
    PHB_ITEM pCallBack;
 #endif /* ! ADS_LINUX */
@@ -198,6 +199,16 @@ static void hb_ads_clrConnection( ADSHANDLE hConnect )
 
    if( hConnect == 0 || hConnect == pAdsData->hConnect )
       pAdsData->hConnect = 0;
+}
+
+int hb_ads_getIndexPageSize( void )
+{
+   return HB_ADS_CONN_DATA->iIndexPageSize;
+}
+
+void hb_ads_setIndexPageSize( int iIndexPageSize )
+{
+   HB_ADS_CONN_DATA->iIndexPageSize = iIndexPageSize;
 }
 
 #if ! defined( ADS_LINUX )
@@ -424,7 +435,7 @@ HB_FUNC( ADSISRECORDLOCKED )
       if( HB_ISNUM( 1 ) )
          ulRec = hb_parnl( 1 );
       else
-         SELF_RECNO( ( AREAP ) pArea, &ulRec );
+         SELF_RECNO( &pArea->area, &ulRec );
 
       if( AdsIsRecordLocked( pArea->hTable, ( UNSIGNED32 ) ulRec, &pbLocked ) == AE_SUCCESS )
          hb_retl( pbLocked != 0 );
@@ -595,7 +606,7 @@ HB_FUNC( ADSKEYNO )
 
       if( pArea )
       {
-         UNSIGNED32 pulKey = 0L;
+         UNSIGNED32 pulKey = 0;
          ADSHANDLE  hIndex = 0;
          UNSIGNED16 usFilterOption = pFilterOption ? ( UNSIGNED16 ) hb_itemGetNI( pFilterOption ) : ADS_IGNOREFILTERS;
 
@@ -650,7 +661,7 @@ HB_FUNC( ADSKEYCOUNT )
 
       if( pArea )
       {
-         UNSIGNED32 pulKey = 0L;
+         UNSIGNED32 pulKey = 0;
          ADSHANDLE  hIndex = 0;
          UNSIGNED16 usFilterOption = pFilterOption ? ( UNSIGNED16 ) hb_itemGetNI( pFilterOption ) : ADS_IGNOREFILTERS;
 
@@ -707,7 +718,7 @@ HB_FUNC( ADSKEYCOUNT )
                   HB_ULONG ulRecNo;
                   UNSIGNED16 u16eof;
 
-                  SELF_RECNO( ( AREAP ) pArea, &ulRecNo );
+                  SELF_RECNO( &pArea->area, &ulRecNo );
                   AdsGotoTop( hIndex );
 
                   AdsAtEOF( pArea->hTable, &u16eof );
@@ -718,7 +729,7 @@ HB_FUNC( ADSKEYCOUNT )
                      pulKey++;
                   }
 
-                  SELF_GOTO( ( AREAP ) pArea, ulRecNo );
+                  SELF_GOTO( &pArea->area, ulRecNo );
                }
                else
                   AdsGetRecordCount( hIndex, usFilterOption, &pulKey );
@@ -957,7 +968,7 @@ HB_FUNC( ADSISRECORDVALID )
    {
       HB_BOOL fEof = HB_TRUE;
 
-      if( SELF_EOF( ( AREAP ) pArea, &fEof ) == HB_SUCCESS && ! fEof )
+      if( SELF_EOF( pArea, &fEof ) == HB_SUCCESS && ! fEof )
       {
          if( pArea->dbfi.itmCobExpr )
          {
@@ -1286,7 +1297,7 @@ HB_FUNC( ADSEXECUTESQLDIRECT )
             pInfo.abName = "";
             pInfo.fReadonly = HB_TRUE;
             pArea->hTable = hCursor;
-            SELF_OPEN( ( AREAP ) pArea, &pInfo );
+            SELF_OPEN( &pArea->area, &pInfo );
          }
          else
             hb_adsCloseCursor( pArea );
@@ -1340,7 +1351,7 @@ HB_FUNC( ADSEXECUTESQL )
             pInfo.abName = "";
             pInfo.fReadonly = HB_TRUE;
             pArea->hTable = hCursor;
-            SELF_OPEN( ( AREAP ) pArea, &pInfo );
+            SELF_OPEN( &pArea->area, &pInfo );
          }
          else
             hb_adsCloseCursor( pArea );
@@ -1473,7 +1484,7 @@ HB_FUNC( ADSREGCALLBACK )
             NOT make any Advantage Client Engine calls. If it does,
             it is possible to get error code 6619 "Communication Layer is busy". */
 
-   PHB_ITEM pCallBack = hb_param( 1, HB_IT_BLOCK );
+   PHB_ITEM pCallBack = hb_param( 1, HB_IT_EVALITEM );
 
    if( pCallBack )
    {
@@ -1661,7 +1672,7 @@ HB_FUNC( ADSVERSION )
    UNSIGNED8  ucLetter;
    UNSIGNED8  ucDesc[ 128 ];
    UNSIGNED16 usDescLen = sizeof( ucDesc ) - 1;
-   char ucVersion[ 256 ];
+   char szVersion[ 256 ];
    int iPos;
 
    AdsGetVersion( &ulMajor,
@@ -1673,22 +1684,22 @@ HB_FUNC( ADSVERSION )
    switch( hb_parni( 1 ) /* iVersionType */ )
    {
       case 0:
-         hb_snprintf( ucVersion, sizeof( ucVersion ), "%lu.%lu%c",
+         hb_snprintf( szVersion, sizeof( szVersion ), "%lu.%lu%c",
                       ( HB_ULONG ) ulMajor, ( HB_ULONG ) ulMinor, ucLetter );
          break;
       case 3:
-         hb_snprintf( ucVersion, sizeof( ucVersion ), "%s, v%lu.%lu%c",
+         hb_snprintf( szVersion, sizeof( szVersion ), "%s, v%lu.%lu%c",
                       ( char * ) ucDesc, ( HB_ULONG ) ulMajor, ( HB_ULONG ) ulMinor, ucLetter );
          break;
       default:
-         ucVersion[ 0 ] = '\0';
+         szVersion[ 0 ] = '\0';
    }
 
-   iPos = ( int ) strlen( ucVersion ) - 1;
-   while( iPos >= 0 && ucVersion[ iPos ] == ' ' )  /* remove trailing spaces */
-      ucVersion[ iPos-- ] = '\0';
+   iPos = ( int ) strlen( szVersion );
+   while( --iPos >= 0 && szVersion[ iPos ] == ' ' )  /* remove trailing spaces */
+      szVersion[ iPos ] = '\0';
 
-   hb_retc( ucVersion );
+   hb_retc( szVersion );
 }
 
 HB_FUNC( ADSCACHEOPENTABLES )
@@ -1823,7 +1834,7 @@ HB_FUNC( ADSDDADDINDEXFILE )
    hb_retl( AdsDDAddIndexFile( HB_ADS_PARCONNECTION( 4 ) /* hConnect */,
                                ( UNSIGNED8 * ) hb_parcx( 1 ) /* pTableName */,
                                ( UNSIGNED8 * ) hb_parcx( 2 ) /* pIndexName */,
-                               ( UNSIGNED8 * ) hb_parcx( 3 ) /* pucComment  */ ) == AE_SUCCESS );
+                               ( UNSIGNED8 * ) hb_parcx( 3 ) /* pucComment */ ) == AE_SUCCESS );
 #else
    hb_retl( HB_FALSE );
 #endif
@@ -1835,7 +1846,7 @@ HB_FUNC( ADSDDREMOVEINDEXFILE )
    hb_retl( AdsDDRemoveIndexFile( HB_ADS_PARCONNECTION( 4 ) /* hConnect */,
                                   ( UNSIGNED8 * ) hb_parcx( 1 ) /* pTableName */,
                                   ( UNSIGNED8 * ) hb_parcx( 2 ) /* pIndexName */,
-                                  ( UNSIGNED16 ) ( HB_ISNUM( 3 ) ? hb_parni( 3 ) : hb_parldef( 3, 0 ) ) /* usDeleteFiles */ ) == AE_SUCCESS );
+                                  ( UNSIGNED16 ) ( HB_ISNUM( 3 ) ? hb_parni( 3 ) : hb_parl( 3 ) ) /* usDeleteFiles */ ) == AE_SUCCESS );
 #else
    hb_retl( HB_FALSE );
 #endif
@@ -2132,9 +2143,9 @@ HB_FUNC( ADSDDGETUSERPROPERTY )
 
 /*
    Verify if a username/password combination is valid for this database
-   Call :    AdsTestLogin( cServerPath, nServerTypes, cUserName, cPassword, options,
+   Call:     AdsTestLogin( cServerPath, nServerTypes, cUserName, cPassword, options,
                           [ nUserProperty, @cBuffer ] )
-   Returns : True if login succeeds
+   Returns:  True if login succeeds
 
    Notes:    This creates a temporary connection only during the execution of this
              function, without disturbing the stored one for any existing connection
@@ -2449,18 +2460,12 @@ HB_FUNC( ADSDDDROPLINK )
 
 HB_FUNC( ADSSETINDEXDIRECTION )
 {
+   UNSIGNED32 nRet = 0;
 #if ADS_LIB_VERSION >= 900
    ADSAREAP pArea = hb_adsGetWorkAreaPointer();
-   ADSHANDLE hIndex;
-   UNSIGNED32 nRet = 0;
 
    if( pArea && HB_ISNUM( 1 ) )
-   {
-      hIndex = pArea->hOrdCurrent;
-      nRet = AdsSetIndexDirection( hIndex, ( UNSIGNED16 ) hb_parni( 1 ) );
-   }
-   hb_retnl( nRet );
-#else
-   hb_retnl( 0 );
+      nRet = AdsSetIndexDirection( pArea->hOrdCurrent, ( UNSIGNED16 ) hb_parni( 1 ) );
 #endif
+   hb_retnl( nRet );
 }

@@ -1370,6 +1370,7 @@ static PHB_GTQTC hb_gt_qtc_new( PHB_GT pGT )
    pQTC->fResizeInc    = HB_FALSE;
    pQTC->fAltEnter     = HB_FALSE;
    pQTC->fMaximized    = HB_FALSE;
+   pQTC->fMinimized    = HB_FALSE;
    pQTC->fFullScreen   = HB_FALSE;
    pQTC->fSelectCopy   = HB_FALSE;
    pQTC->fRepaint      = HB_TRUE;
@@ -1569,7 +1570,7 @@ static void hb_gt_qtc_setWindowFlags( PHB_GTQTC pQTC, Qt::WindowFlags flags, HB_
    }
 }
 
-static void hb_gt_qtc_setWindowState( PHB_GTQTC pQTC, Qt::WindowStates state, HB_BOOL fSet )
+static void hb_gt_qtc_setWindowState( PHB_GTQTC pQTC, Qt::WindowStates state, HB_BOOL fSet, HB_BOOL fShow )
 {
    Qt::WindowStates currState = pQTC->qWnd->windowState(), newState;
 
@@ -1581,9 +1582,12 @@ static void hb_gt_qtc_setWindowState( PHB_GTQTC pQTC, Qt::WindowStates state, HB
    if( newState != currState )
    {
       pQTC->qWnd->setWindowState( newState );
-      HB_QTC_LOCK();
-      pQTC->qWnd->show();
-      HB_QTC_UNLOCK();
+      if( fShow )
+      {
+         HB_QTC_LOCK();
+         pQTC->qWnd->show();
+         HB_QTC_UNLOCK();
+      }
    }
 }
 
@@ -2041,7 +2045,7 @@ static HB_BOOL hb_gt_qtc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          {
             pQTC->fMaximized = ! pQTC->fMaximized;
             if( pQTC->qWnd )
-               hb_gt_qtc_setWindowState( pQTC, Qt::WindowMaximized, pQTC->fMaximized );
+               hb_gt_qtc_setWindowState( pQTC, Qt::WindowMaximized, pQTC->fMaximized, HB_TRUE );
          }
          break;
 
@@ -2054,7 +2058,7 @@ static HB_BOOL hb_gt_qtc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          {
             pQTC->fFullScreen = ! pQTC->fFullScreen;
             if( pQTC->qWnd )
-               hb_gt_qtc_setWindowState( pQTC, Qt::WindowFullScreen, pQTC->fFullScreen );
+               hb_gt_qtc_setWindowState( pQTC, Qt::WindowFullScreen, pQTC->fFullScreen, HB_TRUE );
          }
          break;
 
@@ -2062,6 +2066,19 @@ static HB_BOOL hb_gt_qtc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          pInfo->pResult = hb_itemPutL( pInfo->pResult, pQTC->fAltEnter );
          if( pInfo->pNewVal && HB_IS_LOGICAL( pInfo->pNewVal ) )
             pQTC->fAltEnter = hb_itemGetL( pInfo->pNewVal );
+         break;
+
+      case HB_GTI_MINIMIZED:
+         if( pQTC->qWnd )
+            pQTC->fMinimized = ( pQTC->qWnd->windowState() & Qt::WindowMinimized ) != 0;
+         pInfo->pResult = hb_itemPutL( pInfo->pResult, pQTC->fMinimized );
+         if( pInfo->pNewVal && HB_IS_LOGICAL( pInfo->pNewVal ) &&
+             ( hb_itemGetL( pInfo->pNewVal ) ? ! pQTC->fMinimized : pQTC->fMinimized ) )
+         {
+            pQTC->fMinimized = ! pQTC->fMinimized;
+            if( pQTC->qWnd )
+               hb_gt_qtc_setWindowState( pQTC, Qt::WindowMinimized, pQTC->fMinimized, ! pQTC->fMinimized );
+         }
          break;
 
       case HB_GTI_CLOSABLE:
@@ -2251,12 +2268,77 @@ static HB_BOOL hb_gt_qtc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
          break;
 
       case HB_GTI_DISPIMAGE:
-         if( pInfo->pNewVal && HB_IS_STRING( pInfo->pNewVal ) && pQTC->qWnd )
+         if( pQTC->qWnd &&
+             ( hb_itemType( pInfo->pNewVal ) & ( HB_IT_STRING | HB_IT_ARRAY ) ) )
          {
+            QImage qImg = QImage();
+
+            /* filename or resource */
+            if( HB_IS_STRING( pInfo->pNewVal ) )
+            {
+               QString qStr;
+               hb_gt_qtc_itemGetQString( pInfo->pNewVal, &qStr );
+               qImg = QImage( qStr );
+            }
+            else if( hb_arrayLen( pInfo->pNewVal ) == ( HB_SIZE )
+                     ( hb_arrayGetType( pInfo->pNewVal, 4 ) & HB_IT_NUMERIC ? 4 : 3 ) &&
+                     ( hb_arrayGetType( pInfo->pNewVal, 1 ) & ( HB_IT_POINTER | HB_IT_STRING ) ) &&
+                     ( hb_arrayGetType( pInfo->pNewVal, 2 ) & HB_IT_NUMERIC ) &&
+                     ( hb_arrayGetType( pInfo->pNewVal, 3 ) & HB_IT_NUMERIC ) )
+            {
+               HB_SIZE nSize = hb_arrayGetCLen( pInfo->pNewVal, 1 );
+               int iWidth  = hb_arrayGetNI( pInfo->pNewVal, 2 );
+               int iHeight = hb_arrayGetNI( pInfo->pNewVal, 3 );
+               int iDepth  = hb_arrayGetNI( pInfo->pNewVal, 4 );
+               int iPitch  = 0;
+               const uchar * data = NULL;
+               QImage::Format format;
+
+               switch( iDepth )
+               {
+                  case 0:
+                     iDepth = 32;
+                  case 32:
+                     format = QImage::Format_RGB32;
+                     break;
+                  case 16:
+                     format = QImage::Format_RGB16;
+                     break;
+                  case 1:
+                     format = QImage::Format_Mono;
+                     break;
+                  default:
+                     format = QImage::Format_Invalid;
+                     break;
+               }
+
+               if( format != QImage::Format_Invalid && iWidth > 0 && iHeight > 0 )
+               {
+                  if( nSize > 0 )
+                  {
+                     int iPad = 32;
+                     while( data == NULL && iPad >= 8 )
+                     {
+                        iPitch = ( iWidth * iDepth + iPad - 1 ) / iPad;
+                        if( nSize == ( HB_SIZE ) ( iHeight * iPitch ) )
+                           data = ( const uchar * ) hb_arrayGetCPtr( pInfo->pNewVal, 1 );
+                        else
+                           iPad >>= 1;
+                     }
+                  }
+                  else
+                     data = ( const uchar * ) hb_arrayGetPtr( pInfo->pNewVal, 1 );
+               }
+               if( data != NULL )
+               {
+                  if( iPitch == 0 )
+                     qImg = QImage( data, iWidth, iHeight, QImage::Format_RGB32 );
+                  else
+                     qImg = QImage( data, iWidth, iHeight, iPitch, QImage::Format_RGB32 );
+               }
+            }
+
             QRect rx = pQTC->qWnd->qConsole->image->rect();
-            QString qStr;
-            hb_gt_qtc_itemGetQString( pInfo->pNewVal, &qStr );
-            QImage qImg( qStr );
 
             if( pInfo->pNewVal2 && HB_IS_ARRAY( pInfo->pNewVal2 ) )
             {
@@ -2274,6 +2356,15 @@ static HB_BOOL hb_gt_qtc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                                    hb_arrayGetNI( pInfo->pNewVal2, 3 ),
                                    hb_arrayGetNI( pInfo->pNewVal2, 4 ) );
                }
+            }
+            else if( !qImg.isNull() && hb_itemGetL( pInfo->pNewVal2 ) )
+            {
+               iVal = qImg.height() * rx.width() / qImg.width();
+               if( iVal <= rx.height() )
+                  rx.setHeight( iVal );
+               else
+                  rx.setWidth( qImg.width() * rx.height() / qImg.height() );
+               rx.moveCenter( pQTC->qWnd->qConsole->image->rect().center() );
             }
 
             if( qImg.isNull() )
@@ -2595,7 +2686,14 @@ void QTConsole::setFontSize( int iFH, int iFW )
    pQTC->cellY = pQTC->fontHeight;
 
    if( pQTC->fRepaint )
+   {
       hb_gt_qtc_resetBoxCharBitmaps( pQTC );
+      if( ! image->isNull() &&
+          ( pQTC->iResizeMode == HB_GTI_RESIZEMODE_ROWS ||
+            ( pQTC->qWnd->windowState() & ( Qt::WindowMaximized | Qt::WindowFullScreen ) ) != 0 ) )
+         hb_gt_qtc_setWindowSize( pQTC, pQTC->qWnd->height() / pQTC->cellY,
+                                        pQTC->qWnd->width() / pQTC->cellX );
+   }
    setImageSize();
 }
 
@@ -3202,10 +3300,13 @@ void QTConsole::keyPressEvent( QKeyEvent * event )
                                 ( iFlags & HB_KF_KEYPAD ) == 0 )
          {
             pQTC->fFullScreen = ( pQTC->qWnd->windowState() & Qt::WindowFullScreen ) == 0;
-            hb_gt_qtc_setWindowState( pQTC, Qt::WindowFullScreen, pQTC->fFullScreen );
+            hb_gt_qtc_setWindowState( pQTC, Qt::WindowFullScreen, pQTC->fFullScreen, HB_TRUE );
             return;
          }
          iKey = HB_KX_ENTER;
+         break;
+      case Qt::Key_Menu:
+         hb_gt_qtc_addKeyToInputQueue( pQTC, HB_K_MENU );
          break;
       case Qt::Key_Clear:
          iKey = HB_KX_CENTER;
@@ -3455,10 +3556,12 @@ QTCWindow::QTCWindow( PHB_GTQTC pQTC )
     */
    resize( pQTC->cellX * pQTC->iCols, pQTC->cellY * pQTC->iRows );
 
-   if( pQTC->fMaximized )
-      setWindowState( windowState() | Qt::WindowMaximized );
    if( pQTC->fFullScreen )
       setWindowState( windowState() | Qt::WindowFullScreen );
+   else if( pQTC->fMaximized )
+      setWindowState( windowState() | Qt::WindowMaximized );
+   else if( pQTC->fMinimized )
+      setWindowState( windowState() | Qt::WindowMinimized );
 
    if( pQTC->qIcon )
       setWindowIcon( *pQTC->qIcon );
@@ -3482,12 +3585,7 @@ QTCWindow::~QTCWindow( void )
 void QTCWindow::closeEvent( QCloseEvent * event )
 {
    if( qConsole->pQTC->iCloseMode == 0 )
-   {
-      PHB_ITEM pItem = hb_itemPutL( NULL, HB_TRUE );
-      hb_setSetItem( HB_SET_CANCEL, pItem );
-      hb_itemRelease( pItem );
-      hb_vmRequestCancel();
-   }
+      hb_vmRequestQuit();
    else
       hb_gt_qtc_addKeyToInputQueue( qConsole->pQTC, HB_K_CLOSE );
 

@@ -70,7 +70,7 @@
    #if defined( __USE_LARGEFILE64 )
       /*
        * The macro: __USE_LARGEFILE64 is set when _LARGEFILE64_SOURCE is
-       * define and efectively enables lseek64/flock64/ftruncate64 functions
+       * defined and effectively enables lseek64/flock64/ftruncate64 functions
        * on 32bit machines.
        */
       #define HB_USE_LARGEFILE64
@@ -155,8 +155,7 @@ static PHB_FILE hb_fileNew( HB_FHANDLE hFile, HB_BOOL fShared, HB_BOOL fReadonly
 
    if( ! pFile )
    {
-      pFile = ( PHB_FILE ) hb_xgrab( sizeof( HB_FILE ) );
-      memset( pFile, 0, sizeof( HB_FILE ) );
+      pFile = ( PHB_FILE ) hb_xgrabz( sizeof( HB_FILE ) );
       pFile->pFuncs   = s_fileMethods();
       pFile->device   = device;
       pFile->inode    = inode;
@@ -411,7 +410,7 @@ static PHB_ITEM s_fileDirectory( PHB_FILE_FUNCS pFuncs, const char * pszDirSpec,
 {
    HB_SYMBOL_UNUSED( pFuncs );
 
-   return hb_fsDirectory( pszDirSpec, pszAttr );
+   return hb_fsDirectory( pszDirSpec, pszAttr, HB_TRUE );
 }
 
 static HB_BOOL s_fileTimeGet( PHB_FILE_FUNCS pFuncs, const char * pszFileName, long * plJulian, long * plMillisec )
@@ -1035,9 +1034,8 @@ static const HB_FILE_FUNCS * s_fileposMethods( void )
 
 static PHB_FILE hb_fileposNew( PHB_FILE pFile )
 {
-   PHB_FILEPOS pFilePos = ( PHB_FILEPOS ) hb_xgrab( sizeof( HB_FILEPOS ) );
+   PHB_FILEPOS pFilePos = ( PHB_FILEPOS ) hb_xgrabz( sizeof( HB_FILEPOS ) );
 
-   memset( pFilePos, 0, sizeof( HB_FILEPOS ) );
    pFilePos->pFuncs   = s_fileposMethods();
    pFilePos->pFile    = pFile;
    pFilePos->seek_pos = 0;
@@ -1175,7 +1173,7 @@ PHB_ITEM hb_fileDirectory( const char * pszDirSpec, const char * pszAttr )
    if( i >= 0 )
       return s_pFileTypes[ i ]->Directory( s_pFileTypes[ i ], pszDirSpec, pszAttr );
 
-   return hb_fsDirectory( pszDirSpec, pszAttr );
+   return hb_fsDirectory( pszDirSpec, pszAttr, HB_TRUE );
 }
 
 HB_BOOL hb_fileTimeGet( const char * pszFileName, long * plJulian, long * plMillisec )

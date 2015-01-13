@@ -61,12 +61,11 @@ RC := rc.exe
 RC_OUT := -fo$(subst x,x, )
 RCFLAGS += -I. -I$(HB_HOST_INC)
 # Windows SDK 7.0 also supports it, but we cannot detect it.
+# # NOTE: Compiler version is not enough to detect supported
+# #       parameters when Platform SDK rc.exe is used.
 # ifeq ($(filter $(HB_COMPILER_VER),1200 1300 1310 1400 1500),)
-#   RCFLAGS += -nologo
+#    RCFLAGS += -nologo
 # endif
-#
-# In fact we cannot rely here on compiler version at all, when using
-# Platform SDK rc.exe - Windows 2003 SDK level 5.2.3690.0 does not have -nologo option
 
 # # NOTE: -GA flag should be disabled when building MT _.dlls_,
 # #       as it creates bad code according to MS docs [vszakats].

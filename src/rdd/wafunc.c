@@ -109,8 +109,7 @@ void * hb_rddNewAreaNode( LPRDDNODE pRddNode, HB_USHORT uiRddID )
    {
       HB_USHORT uiSize;
 
-      pArea = ( AREAP ) hb_xgrab( sizeof( AREA ) );
-      memset( pArea, 0, sizeof( AREA ) );
+      pArea = ( AREAP ) hb_xgrabz( sizeof( AREA ) );
       pArea->lprfsHost = &pRddNode->pTable;
       pArea->rddID = uiRddID;
 
@@ -130,8 +129,7 @@ void * hb_rddNewAreaNode( LPRDDNODE pRddNode, HB_USHORT uiRddID )
    }
    else
    {
-      pArea = ( AREAP ) hb_xgrab( pRddNode->uiAreaSize );
-      memset( pArea, 0, pRddNode->uiAreaSize );
+      pArea = ( AREAP ) hb_xgrabz( pRddNode->uiAreaSize );
       pArea->lprfsHost = &pRddNode->pTable;
       pArea->rddID = uiRddID;
    }
@@ -205,28 +203,41 @@ void * hb_rddAllocWorkAreaAlias( const char * szAlias, int iArea )
  */
 HB_USHORT hb_rddFieldIndex( AREAP pArea, const char * szName )
 {
-   HB_USHORT uiCount = 0;
-   LPFIELD pField;
-
    HB_TRACE( HB_TR_DEBUG, ( "hb_rddFieldIndex(%p, %s)", pArea, szName ) );
 
    while( HB_ISSPACE( *szName ) )
-   {
       ++szName;
-   }
 
    if( *szName )
    {
-      char szSym[ HB_SYMBOL_NAME_LEN + 1 ];
-      hb_strncpyUpperTrim( szSym, szName, sizeof( szSym ) - 1 );
+      HB_SIZE nLen = strlen( szName );
 
-      pField = pArea->lpFields;
-      while( pField )
+      while( HB_ISSPACE( szName[ nLen - 1 ] ) )
+         --nLen;
+
+      if( nLen <= HB_SYMBOL_NAME_LEN )
       {
-         ++uiCount;
-         if( strcmp( szSym, hb_dynsymName( ( PHB_DYNS ) pField->sym ) ) == 0 )
-            return uiCount;
-         pField = pField->lpfNext;
+         char szFieldName[ HB_SYMBOL_NAME_LEN + 1 ];
+         PHB_DYNS pDynSym;
+
+         szFieldName[ nLen ] = '\0';
+         while( nLen-- )
+            szFieldName[ nLen ] = HB_TOUPPER( szName[ nLen ] );
+
+         pDynSym = hb_dynsymFind( szFieldName );
+         if( pDynSym )
+         {
+            LPFIELD pField = pArea->lpFields;
+            HB_USHORT uiCount = 0;
+
+            while( pField )
+            {
+               ++uiCount;
+               if( pDynSym == ( PHB_DYNS ) pField->sym )
+                  return uiCount;
+               pField = pField->lpfNext;
+            }
+         }
       }
    }
    return 0;
@@ -524,8 +535,11 @@ HB_ERRCODE hb_rddGetFieldValue( PHB_ITEM pItem, PHB_SYMB pFieldSymbol )
        * generate an error with retry possibility
        * (user created error handler can make this field accessible)
        */
-      PHB_ITEM pError = hb_errRT_New( ES_ERROR, NULL, EG_NOVAR, EDBCMD_NOVAR,
-                                      NULL, pFieldSymbol->szName, 0, EF_CANRETRY );
+      PHB_ITEM pError;
+
+      pError = hb_errRT_New( ES_ERROR, NULL, EG_NOVAR, EDBCMD_NOVAR,
+                             NULL, pFieldSymbol->szName, 0, EF_CANRETRY );
+      hb_itemClear( pItem );
 
       while( hb_errLaunch( pError ) == E_RETRY )
       {
