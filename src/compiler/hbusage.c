@@ -99,7 +99,6 @@ void hb_compPrintUsage( HB_COMP_DECL, const char * szSelf )
       "\n          -undef:<id>      #undef <id>",
       "\n          -v               variables are assumed M->",
       "\n          -w[<level>]      set warning level number (0..3, default 1)",
-      "\n          -x[<prefix>]     set symbol init function name prefix (for .c only)",
 #ifdef YYDEBUG
       "\n          -y               trace lex & yacc activity",
 #endif
@@ -274,6 +273,6 @@ void hb_compPrintLogo( HB_COMP_DECL )
 
    hb_compOutStd( HB_COMP_PARAM, szVer );
    hb_compOutStd( HB_COMP_PARAM,
-                  "\nCopyright (c) 1999-2014, http://harbour-project.org/\n" );
+                  "\nCopyright (c) 1999-2015, http://harbour-project.org/\n" );
    hb_xfree( szVer );
 }

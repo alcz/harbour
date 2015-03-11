@@ -407,8 +407,7 @@ static PMIXTAG mixTagCreate( const char * szTagName, PHB_ITEM pKeyExpr, PHB_ITEM
    PHB_ITEM            pItem, pEvalItem = NULL;
 
 
-   pTag = ( PMIXTAG ) hb_xgrab( sizeof( MIXTAG ) );
-   memset( pTag, 0, sizeof( MIXTAG ) );
+   pTag = ( PMIXTAG ) hb_xgrabz( sizeof( MIXTAG ) );
 
    pTag->szName = ( char * ) hb_xgrab( MIX_MAXTAGNAMELEN + 1 );
    hb_strncpyUpperTrim( pTag->szName, szTagName, MIX_MAXTAGNAMELEN );
@@ -1139,20 +1138,29 @@ static HB_ERRCODE adsxOrderCreate( ADSXAREAP pArea, LPDBORDERCREATEINFO pOrderIn
       UNSIGNED16 usLen = sizeof( szKeyExpr );
 
       if( pArea->adsarea.area.lpdbOrdCondInfo->fUseCurrent && pArea->adsarea.hOrdCurrent )
-      {
          AdsGetIndexExpr( pArea->adsarea.hOrdCurrent, szKeyExpr, &usLen );
-      }
       else
          szKeyExpr[ 0 ] = '\0';
 
-      u32RetVal = AdsCreateIndex61( 
+#if ADS_LIB_VERSION >= 610
+      u32RetVal = AdsCreateIndex61(
          pArea->adsarea.area.lpdbOrdCondInfo->fUseCurrent ? pArea->adsarea.hOrdCurrent : pArea->adsarea.hTable,
          ( UNSIGNED8 * ) pOrderInfo->abBagName,
          ( UNSIGNED8 * ) pOrderInfo->atomBagName,
-         szKeyExpr[ 0 ] ? ( UNSIGNED8 * ) szKeyExpr : ( UNSIGNED8 * ) "1",
-         ( UNSIGNED8 * ) ( ( bForADS && pArea->adsarea.area.lpdbOrdCondInfo->abFor ) ? pArea->adsarea.area.lpdbOrdCondInfo->abFor : NULL ),
-         ( UNSIGNED8 * ) ( ( bWhileADS && pArea->adsarea.area.lpdbOrdCondInfo->abWhile ) ? pArea->adsarea.area.lpdbOrdCondInfo->abWhile : NULL ),
+         szKeyExpr[ 0 ] ? szKeyExpr : ( UNSIGNED8 * ) "1",
+         bForADS ? ( UNSIGNED8 * ) pArea->adsarea.area.lpdbOrdCondInfo->abFor : NULL,
+         bWhileADS ? ( UNSIGNED8 * ) pArea->adsarea.area.lpdbOrdCondInfo->abWhile : NULL,
          ADS_COMPOUND, ADS_DEFAULT, &hIndex );
+#else
+      u32RetVal = AdsCreateIndex(
+         pArea->adsarea.area.lpdbOrdCondInfo->fUseCurrent ? pArea->adsarea.hOrdCurrent : pArea->adsarea.hTable,
+         ( UNSIGNED8 * ) pOrderInfo->abBagName,
+         ( UNSIGNED8 * ) pOrderInfo->atomBagName,
+         szKeyExpr[ 0 ] ? szKeyExpr : ( UNSIGNED8 * ) "1",
+         bForADS ? ( UNSIGNED8 * ) pArea->adsarea.area.lpdbOrdCondInfo->abFor : NULL,
+         bWhileADS ? ( UNSIGNED8 * ) pArea->adsarea.area.lpdbOrdCondInfo->abWhile : NULL,
+         ADS_COMPOUND, &hIndex );
+#endif
 
       if( u32RetVal != AE_SUCCESS )
       {
@@ -1378,7 +1386,6 @@ static HB_ERRCODE adsxOrderDestroy( ADSXAREAP pArea, LPDBORDERINFO pOrderInfo )
 
    if( pTag )
    {
-
       if( pTag == pArea->pTagList )
          pArea->pTagList = pTag->pNext;
       else
@@ -1551,7 +1558,7 @@ static HB_ERRCODE adsxOrderInfo( ADSXAREAP pArea, HB_USHORT uiIndex, LPDBORDERIN
 
             pKey = mixKeyEval( pTag, pArea );
 
-            if( ! mixFindKey( pTag, pKey, &ulKeyPos + 1 ) )
+            if( ! mixFindKey( pTag, pKey, &ulKeyPos ) )
                ulKeyPos = 0;
 
             mixKeyFree( pKey );

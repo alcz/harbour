@@ -143,20 +143,18 @@ static int s_inetGetError( PHB_SOCKET_STRUCT socket )
 {
    int iError;
 
-   if( socket->errorFunc )
-      iError = socket->errorFunc( socket->stream );
-   else
-   {
-      iError = hb_socketGetError();
-      if( iError == HB_SOCKET_ERR_TIMEOUT )
-         iError = HB_INET_ERR_TIMEOUT;
-   }
+   iError = socket->errorFunc ? socket->errorFunc( socket->stream ) :
+                                hb_socketGetError();
+
+   if( iError == HB_SOCKET_ERR_TIMEOUT )
+      iError = HB_INET_ERR_TIMEOUT;
+
    return iError;
 }
 
 static HB_BOOL s_inetIsTimeout( PHB_SOCKET_STRUCT socket )
 {
-   return s_inetGetError( socket ) == HB_SOCKET_ERR_TIMEOUT;
+   return s_inetGetError( socket ) == HB_INET_ERR_TIMEOUT;
 }
 
 static void hb_inetGetError( PHB_SOCKET_STRUCT socket )
@@ -260,6 +258,18 @@ HB_SOCKET hb_znetInetFD( PHB_ITEM pItem, HB_BOOL fError )
       hb_inetErrRT();
 
    return HB_NO_SOCKET;
+}
+
+HB_MAXINT hb_znetInetTimeout( PHB_ITEM pItem, HB_BOOL fError )
+{
+   PHB_SOCKET_STRUCT socket = ( PHB_SOCKET_STRUCT ) hb_itemGetPtrGC( pItem, &s_gcInetFuncs );
+
+   if( socket )
+      return socket->iTimeout; /* socket->pPeriodicBlock ? socket->iTimeLimit */
+   else if( fError )
+      hb_inetErrRT();
+
+   return -1;
 }
 
 HB_BOOL hb_znetInetInitialize( PHB_ITEM pItem, PHB_ZNETSTREAM pStream,
@@ -700,10 +710,6 @@ static void s_inetRecvInternal( int iMode )
 {
    PHB_SOCKET_STRUCT socket = HB_PARSOCKET( 1 );
    PHB_ITEM pBuffer = hb_param( 2, HB_IT_STRING );
-   char * buffer;
-   HB_SIZE nLen;
-   int iLen, iMaxLen, iReceived;
-   int iTimeElapsed;
 
    if( socket == NULL || pBuffer == NULL || ! HB_ISBYREF( 2 ) )
       hb_inetErrRT();
@@ -711,6 +717,10 @@ static void s_inetRecvInternal( int iMode )
       hb_retni( -1 );
    else
    {
+      int iLen, iMaxLen, iReceived, iTimeElapsed;
+      char * buffer;
+      HB_SIZE nLen;
+
       if( hb_itemGetWriteCL( pBuffer, &buffer, &nLen ) )
          iLen = ( int ) nLen;
       else
@@ -730,8 +740,7 @@ static void s_inetRecvInternal( int iMode )
       else
          iMaxLen = iLen;
 
-      iReceived = 0;
-      iTimeElapsed = 0;
+      iReceived = iTimeElapsed = 0;
       socket->iError = HB_INET_ERR_OK;
       do
       {
@@ -745,11 +754,11 @@ static void s_inetRecvInternal( int iMode )
          }
          else if( iLen == -1 && s_inetIsTimeout( socket ) )
          {
-            /* timed out; let's see if we have to run a cb routine */
-            iTimeElapsed += socket->iTimeout;
             /* if we have a pPeriodicBlock, timeLimit is our REAL timeout */
             if( socket->pPeriodicBlock )
             {
+               /* timed out; let's see if we have to run a cb routine */
+               iTimeElapsed += socket->iTimeout;
                hb_execFromArray( socket->pPeriodicBlock );
                /* do we continue? */
                if( hb_parl( -1 ) && hb_vmRequestQuery() == 0 &&
@@ -834,11 +843,11 @@ static void s_inetRecvPattern( const char * const * patterns, int * patternsizes
       if( iLen == -1 && s_inetIsTimeout( socket ) )
       {
          iLen = -2;     /* this signals timeout */
-         iTimeElapsed += socket->iTimeout;
          if( socket->pPeriodicBlock )
          {
             HB_BOOL fResult;
 
+            iTimeElapsed += socket->iTimeout;
             hb_execFromArray( socket->pPeriodicBlock );
             fResult = hb_parl( -1 ) && hb_vmRequestQuery() == 0;
 
@@ -1469,9 +1478,9 @@ HB_FUNC( HB_INETDGRAMRECV )
          iMax = hb_socketRecvFrom( socket->sd, buffer, iLen, 0,
                                    &socket->remote, &socket->remotelen,
                                    socket->iTimeout );
-         iTimeElapsed += socket->iTimeout;
          if( socket->pPeriodicBlock )
          {
+            iTimeElapsed += socket->iTimeout;
             hb_execFromArray( socket->pPeriodicBlock );
             /* do we continue? */
             fRepeat = hb_parl( -1 ) && hb_vmRequestQuery() == 0 &&
