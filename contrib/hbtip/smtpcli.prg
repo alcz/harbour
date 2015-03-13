@@ -167,7 +167,7 @@ METHOD StartTLS() CLASS TIPClientSMTP
 
    IF ::GetOk() .AND. ::lHasSSL
       ::EnableSSL( .T. )
-      ActivateSSL( Self )
+      __tip_SSLConnectFD( ::ssl, ::SocketCon )
       ::inetSendAll( ::SocketCon, "EHLO " + iif( Empty( ::cClientHost ), "TIPClientSMTP", ::cClientHost ) + ::cCRLF )
       RETURN ::DetectSecurity()
    ENDIF
@@ -179,10 +179,8 @@ METHOD DetectSecurity() CLASS TIPClientSMTP
    LOCAL lOk
 
    DO WHILE .T.
-      IF ! ( lOk := ::GetOk() )
-         EXIT
-      ENDIF
-      IF ::cReply == NIL
+      IF !( lOk := ::GetOk() ) .OR. ;
+         ::cReply == NIL
          EXIT
       ENDIF
       IF "LOGIN" $ ::cReply
@@ -299,21 +297,13 @@ METHOD Write( cData, nLen, bCommit ) CLASS TIPClientSMTP
 
 METHOD ServerSuportSecure( /* @ */ lAuthPlain, /* @ */ lAuthLogin ) CLASS TIPClientSMTP
 
-   lAuthLogin := .F.
-   lAuthPlain := .F.
-
    IF ::OpenSecure()
-      DO WHILE .T.
-         ::GetOk()
-         IF ::cReply == NIL
-            EXIT
-         ELSEIF "LOGIN" $ ::cReply
-            lAuthLogin := .T.
-         ELSEIF "PLAIN" $ ::cReply
-            lAuthPlain := .T.
-         ENDIF
-      ENDDO
+      lAuthLogin := ::lAuthLogin
+      lAuthPlain := ::lAuthPlain
       ::Close()
+   ELSE
+      lAuthLogin := .F.
+      lAuthPlain := .F.
    ENDIF
 
    RETURN lAuthLogin .OR. lAuthPlain
