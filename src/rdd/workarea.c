@@ -1077,6 +1077,8 @@ static HB_ERRCODE hb_waEval( AREAP pArea, LPDBEVALINFO pEvalInfo )
    else if( pEvalInfo->dbsci.lNext )
    {
       lNext = hb_itemGetNL( pEvalInfo->dbsci.lNext );
+      if( lNext <= 0 )
+         return HB_SUCCESS;
    }
    else if( ! pEvalInfo->dbsci.itmCobWhile &&
             ! hb_itemGetLX( pEvalInfo->dbsci.fRest ) )
@@ -1087,45 +1089,42 @@ static HB_ERRCODE hb_waEval( AREAP pArea, LPDBEVALINFO pEvalInfo )
 
    /* TODO: use SKIPSCOPE() method and fRest parameter */
 
-   if( ! pEvalInfo->dbsci.lNext || lNext > 0 )
+   for( ;; )
    {
-      for( ;; )
+      if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         return HB_FAILURE;
+
+      if( fEof )
+         break;
+
+      if( pEvalInfo->dbsci.itmCobWhile )
       {
-         if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         if( SELF_EVALBLOCK( pArea, pEvalInfo->dbsci.itmCobWhile ) != HB_SUCCESS )
             return HB_FAILURE;
-
-         if( fEof )
+         if( ! hb_itemGetLX( pArea->valResult ) )
             break;
+      }
 
-         if( pEvalInfo->dbsci.itmCobWhile )
-         {
-            if( SELF_EVALBLOCK( pArea, pEvalInfo->dbsci.itmCobWhile ) != HB_SUCCESS )
-               return HB_FAILURE;
-            if( ! hb_itemGetLX( pArea->valResult ) )
-               break;
-         }
+      if( pEvalInfo->dbsci.itmCobFor )
+      {
+         if( SELF_EVALBLOCK( pArea, pEvalInfo->dbsci.itmCobFor ) != HB_SUCCESS )
+            return HB_FAILURE;
+         fFor = hb_itemGetLX( pArea->valResult );
+      }
+      else
+         fFor = HB_TRUE;
 
-         if( pEvalInfo->dbsci.itmCobFor )
-         {
-            if( SELF_EVALBLOCK( pArea, pEvalInfo->dbsci.itmCobFor ) != HB_SUCCESS )
-               return HB_FAILURE;
-            fFor = hb_itemGetLX( pArea->valResult );
-         }
-         else
-            fFor = HB_TRUE;
-
-         if( fFor )
-         {
-            if( SELF_EVALBLOCK( pArea, pEvalInfo->itmBlock ) != HB_SUCCESS )
-               return HB_FAILURE;
-         }
-
-         if( pEvalInfo->dbsci.itmRecID || ( pEvalInfo->dbsci.lNext && --lNext < 1 ) )
-            break;
-
-         if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
+      if( fFor )
+      {
+         if( SELF_EVALBLOCK( pArea, pEvalInfo->itmBlock ) != HB_SUCCESS )
             return HB_FAILURE;
       }
+
+      if( pEvalInfo->dbsci.itmRecID || ( pEvalInfo->dbsci.lNext && --lNext < 1 ) )
+         break;
+
+      if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
+         return HB_FAILURE;
    }
 
    return HB_SUCCESS;
@@ -1157,6 +1156,8 @@ static HB_ERRCODE hb_waLocate( AREAP pArea, HB_BOOL fContinue )
    else if( pArea->dbsi.lNext )
    {
       lNext = hb_itemGetNL( pArea->dbsi.lNext );
+      if( lNext <= 0 )
+         return HB_SUCCESS;
    }
    else if( ! pArea->dbsi.itmCobWhile &&
             ! hb_itemGetLX( pArea->dbsi.fRest ) )
@@ -1169,48 +1170,45 @@ static HB_ERRCODE hb_waLocate( AREAP pArea, HB_BOOL fContinue )
 
    /* TODO: use SKIPSCOPE() method and fRest parameter */
 
-   if( ! pArea->dbsi.lNext || lNext > 0 )
+   for( ;; )
    {
-      for( ;; )
+      if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         return HB_FAILURE;
+
+      if( fEof )
+         break;
+
+      if( ! fContinue && pArea->dbsi.itmCobWhile )
       {
-         if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         if( SELF_EVALBLOCK( pArea, pArea->dbsi.itmCobWhile ) != HB_SUCCESS )
+            return HB_FAILURE;
+         if( ! hb_itemGetLX( pArea->valResult ) )
+            break;
+      }
+
+      if( ! pArea->dbsi.itmCobFor )
+      {
+         pArea->fFound = HB_TRUE;
+         break;
+      }
+      else
+      {
+         if( SELF_EVALBLOCK( pArea, pArea->dbsi.itmCobFor ) != HB_SUCCESS )
             return HB_FAILURE;
 
-         if( fEof )
-            break;
-
-         if( ! fContinue && pArea->dbsi.itmCobWhile )
-         {
-            if( SELF_EVALBLOCK( pArea, pArea->dbsi.itmCobWhile ) != HB_SUCCESS )
-               return HB_FAILURE;
-            if( ! hb_itemGetLX( pArea->valResult ) )
-               break;
-         }
-
-         if( ! pArea->dbsi.itmCobFor )
+         if( hb_itemGetLX( pArea->valResult ) )
          {
             pArea->fFound = HB_TRUE;
             break;
          }
-         else
-         {
-            if( SELF_EVALBLOCK( pArea, pArea->dbsi.itmCobFor ) != HB_SUCCESS )
-               return HB_FAILURE;
-
-            if( hb_itemGetLX( pArea->valResult ) )
-            {
-               pArea->fFound = HB_TRUE;
-               break;
-            }
-         }
-
-         if( ! fContinue &&
-             ( pArea->dbsi.itmRecID || ( pArea->dbsi.lNext && --lNext < 1 ) ) )
-            break;
-
-         if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
-            return HB_FAILURE;
       }
+
+      if( ! fContinue &&
+          ( pArea->dbsi.itmRecID || ( pArea->dbsi.lNext && --lNext < 1 ) ) )
+         break;
+
+      if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
+         return HB_FAILURE;
    }
 
    return HB_SUCCESS;
@@ -1234,6 +1232,8 @@ static HB_ERRCODE hb_waTrans( AREAP pArea, LPDBTRANSINFO pTransInfo )
    else if( pTransInfo->dbsci.lNext )
    {
       lNext = hb_itemGetNL( pTransInfo->dbsci.lNext );
+      if( lNext <= 0 )
+         return HB_SUCCESS;
    }
    else if( ! pTransInfo->dbsci.itmCobWhile &&
             ! hb_itemGetLX( pTransInfo->dbsci.fRest ) )
@@ -1244,45 +1244,42 @@ static HB_ERRCODE hb_waTrans( AREAP pArea, LPDBTRANSINFO pTransInfo )
 
    /* TODO: use SKIPSCOPE() method and fRest parameter */
 
-   if( ! pTransInfo->dbsci.lNext || lNext > 0 )
+   for( ;; )
    {
-      for( ;; )
+      if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         return HB_FAILURE;
+
+      if( fEof )
+         break;
+
+      if( pTransInfo->dbsci.itmCobWhile )
       {
-         if( SELF_EOF( pArea, &fEof ) != HB_SUCCESS )
+         if( SELF_EVALBLOCK( pArea, pTransInfo->dbsci.itmCobWhile ) != HB_SUCCESS )
             return HB_FAILURE;
-
-         if( fEof )
+         if( ! hb_itemGetLX( pArea->valResult ) )
             break;
+      }
 
-         if( pTransInfo->dbsci.itmCobWhile )
-         {
-            if( SELF_EVALBLOCK( pArea, pTransInfo->dbsci.itmCobWhile ) != HB_SUCCESS )
-               return HB_FAILURE;
-            if( ! hb_itemGetLX( pArea->valResult ) )
-               break;
-         }
+      if( pTransInfo->dbsci.itmCobFor )
+      {
+         if( SELF_EVALBLOCK( pArea, pTransInfo->dbsci.itmCobFor ) != HB_SUCCESS )
+            return HB_FAILURE;
+         fFor = hb_itemGetLX( pArea->valResult );
+      }
+      else
+         fFor = HB_TRUE;
 
-         if( pTransInfo->dbsci.itmCobFor )
-         {
-            if( SELF_EVALBLOCK( pArea, pTransInfo->dbsci.itmCobFor ) != HB_SUCCESS )
-               return HB_FAILURE;
-            fFor = hb_itemGetLX( pArea->valResult );
-         }
-         else
-            fFor = HB_TRUE;
-
-         if( fFor )
-         {
-            if( SELF_TRANSREC( pArea, pTransInfo ) != HB_SUCCESS )
-               return HB_FAILURE;
-         }
-
-         if( pTransInfo->dbsci.itmRecID || ( pTransInfo->dbsci.lNext && --lNext < 1 ) )
-            break;
-
-         if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
+      if( fFor )
+      {
+         if( SELF_TRANSREC( pArea, pTransInfo ) != HB_SUCCESS )
             return HB_FAILURE;
       }
+
+      if( pTransInfo->dbsci.itmRecID || ( pTransInfo->dbsci.lNext && --lNext < 1 ) )
+         break;
+
+      if( SELF_SKIP( pArea, 1 ) != HB_SUCCESS )
+         return HB_FAILURE;
    }
 
    return HB_SUCCESS;
@@ -1299,13 +1296,13 @@ static HB_ERRCODE hb_waTransRec( AREAP pArea, LPDBTRANSINFO pTransInfo )
 
    HB_TRACE( HB_TR_DEBUG, ( "hb_waTransRec(%p, %p)", pArea, pTransInfo ) );
 
-   /* Record deleted? */
-   errCode = SELF_DELETED( pArea, &bDeleted );
-   if( errCode != HB_SUCCESS )
-      return errCode;
-
    if( pTransInfo->uiFlags & DBTF_MATCH && pTransInfo->uiFlags & DBTF_PUTREC )
    {
+      /* Record deleted? */
+      errCode = SELF_DELETED( pArea, &bDeleted );
+      if( errCode != HB_SUCCESS )
+         return errCode;
+
       errCode = SELF_GETREC( pArea, &pRecord );
       if( errCode != HB_SUCCESS )
          return errCode;
@@ -1323,6 +1320,16 @@ static HB_ERRCODE hb_waTransRec( AREAP pArea, LPDBTRANSINFO pTransInfo )
       LPDBTRANSITEM pTransItem;
       PHB_ITEM pItem;
       HB_USHORT uiCount;
+
+      if( pTransInfo->uiFlags & DBTF_RECALL )
+         bDeleted = HB_FALSE;
+      else
+      {
+         /* Record deleted? */
+         errCode = SELF_DELETED( pArea, &bDeleted );
+         if( errCode != HB_SUCCESS )
+            return errCode;
+      }
 
       /* Append a new record */
       errCode = SELF_APPEND( pTransInfo->lpaDest, HB_TRUE );
@@ -1347,16 +1354,17 @@ static HB_ERRCODE hb_waTransRec( AREAP pArea, LPDBTRANSINFO pTransInfo )
 
    /* Delete the new record if copy fail */
    if( errCode != HB_SUCCESS )
-   {
       SELF_DELETE( pTransInfo->lpaDest );
-      return errCode;
+   else if( bDeleted )
+   {
+      /* Record with deleted flag */
+      if( pTransInfo->uiFlags & DBTF_RECALL )
+         errCode = SELF_RECALL( pTransInfo->lpaDest );
+      else
+         errCode = SELF_DELETE( pTransInfo->lpaDest );
    }
 
-   /* Delete the new record */
-   if( bDeleted )
-      return SELF_DELETE( pTransInfo->lpaDest );
-
-   return HB_SUCCESS;
+   return errCode;
 }
 
 /*
@@ -1822,7 +1830,7 @@ static HB_ERRCODE hb_waEvalBlock( AREAP pArea, PHB_ITEM pBlock )
 
    if( ! pArea->valResult )
       pArea->valResult = hb_itemNew( NULL );
-   hb_itemCopy( pArea->valResult, pItem );
+   hb_itemMove( pArea->valResult, pItem );
 
    hb_rddSelectWorkAreaNumber( iCurrArea );
 

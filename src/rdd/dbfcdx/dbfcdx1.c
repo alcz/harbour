@@ -3459,7 +3459,7 @@ static void hb_cdxTagHeaderStore( LPCDXTAG pTag )
    tagHeader.indexOpt = pTag->OptFlags;
    if( pTag->TagBlock == 0 )
    {
-      HB_PUT_LE_UINT32( tagHeader.signature, CDX_HARBOUR_SIGNATURE );
+      HB_PUT_BE_UINT32( tagHeader.signature, CDX_HARBOUR_SIGNATURE );
       tagHeader.indexSig = pTag->pIndex->fLargeFile ? 0x21 : 0x01;
    }
    else
@@ -3551,8 +3551,10 @@ static void hb_cdxTagLoad( LPCDXTAG pTag )
    {
       HB_BOOL fLargeFile = HB_FALSE;
       HB_USHORT uiPageLen = CDX_PAGELEN, uiHeaderLen = CDX_HEADERLEN;
+      HB_U32 u32Sig = HB_GET_BE_UINT32( tagHeader.signature );
 
-      if( HB_GET_LE_UINT32( tagHeader.signature ) == CDX_HARBOUR_SIGNATURE )
+      if( u32Sig == CDX_HARBOUR_SIGNATURE ||
+          u32Sig == HB_SWAP_UINT32( CDX_HARBOUR_SIGNATURE ) )
       {
          fLargeFile  = tagHeader.indexSig == 0x21;
          uiHeaderLen = HB_GET_LE_UINT16( tagHeader.headerLen );
@@ -8996,15 +8998,15 @@ static HB_BOOL hb_cdxQSort( LPCDXSORTINFO pSort, HB_BYTE * pSrc, HB_BYTE * pBuf,
 
 static void hb_cdxSortSortPage( LPCDXSORTINFO pSort )
 {
-   HB_SIZE nSize = pSort->ulKeys * ( pSort->keyLen + 4 );
+   HB_SIZE nSize = ( HB_SIZE ) pSort->ulKeys * ( pSort->keyLen + 4 );
 
 #ifdef HB_CDX_DBGTIME
    cdxTimeIdxBld -= hb_cdxGetTime();
 #endif
    if( ! hb_cdxQSort( pSort, pSort->pKeyPool, &pSort->pKeyPool[ nSize ], pSort->ulKeys ) )
-   {
-      memcpy( pSort->pKeyPool, &pSort->pKeyPool[ nSize ], nSize );
-   }
+      pSort->pStartKey = &pSort->pKeyPool[ nSize ];
+   else
+      pSort->pStartKey = pSort->pKeyPool;
 #ifdef HB_CDX_DBGTIME
    cdxTimeIdxBld += hb_cdxGetTime();
 #endif
@@ -9116,7 +9118,7 @@ static void hb_cdxSortAddNodeKey( LPCDXSORTINFO pSort, int iLevel, HB_BYTE * pKe
 
 static void hb_cdxSortWritePage( LPCDXSORTINFO pSort )
 {
-   HB_SIZE nSize = pSort->ulKeys * ( pSort->keyLen + 4 );
+   HB_SIZE nSize = ( HB_SIZE ) pSort->ulKeys * ( pSort->keyLen + 4 );
 
    hb_cdxSortSortPage( pSort );
 
@@ -9130,7 +9132,7 @@ static void hb_cdxSortWritePage( LPCDXSORTINFO pSort )
    }
    pSort->pSwapPage[ pSort->ulCurPage ].ulKeys = pSort->ulKeys;
    pSort->pSwapPage[ pSort->ulCurPage ].nOffset = hb_fileSize( pSort->pTempFile );
-   if( hb_fileWriteAt( pSort->pTempFile, pSort->pKeyPool,
+   if( hb_fileWriteAt( pSort->pTempFile, pSort->pStartKey,
                        nSize, pSort->pSwapPage[ pSort->ulCurPage ].nOffset ) != nSize )
       hb_errInternal( 9302, "hb_cdxSortWritePage: Write error in temporary file.", NULL, NULL );
    pSort->ulKeys = 0;
@@ -9145,7 +9147,7 @@ static void hb_cdxSortGetPageKey( LPCDXSORTINFO pSort, HB_ULONG ulPage,
    if( pSort->pSwapPage[ ulPage ].ulKeyBuf == 0 )
    {
       HB_ULONG ulKeys = HB_MIN( pSort->ulPgKeys, pSort->pSwapPage[ ulPage ].ulKeys );
-      HB_SIZE nSize = ulKeys * ( iLen + 4 );
+      HB_SIZE nSize = ( HB_SIZE ) ulKeys * ( iLen + 4 );
 
       if( hb_fileReadAt( pSort->pTempFile, pSort->pSwapPage[ ulPage ].pKeyPool,
                          nSize, pSort->pSwapPage[ ulPage ].nOffset ) != nSize )
@@ -9465,7 +9467,7 @@ static void hb_cdxSortOut( LPCDXSORTINFO pSort )
       pSort->pSwapPage[ 0 ].ulKeys   = pSort->ulKeys;
       pSort->pSwapPage[ 0 ].ulKeyBuf = pSort->ulKeys;
       pSort->pSwapPage[ 0 ].ulCurKey = 0;
-      pSort->pSwapPage[ 0 ].pKeyPool = pSort->pKeyPool;
+      pSort->pSwapPage[ 0 ].pKeyPool = pSort->pStartKey;
    }
 
 #ifdef HB_CDX_NEW_SORT
@@ -9669,7 +9671,7 @@ static void hb_cdxTagDoIndex( LPCDXTAG pTag, HB_BOOL fReindex )
                   iRec = ulRecCount - ulRecNo + 1;
                if( ulNextCount > 0 && ulNextCount < ( HB_ULONG ) iRec )
                   iRec = ( int ) ulNextCount;
-               nSize = iRec * pArea->dbfarea.uiRecordLen;
+               nSize = ( HB_SIZE ) iRec * pArea->dbfarea.uiRecordLen;
                if( hb_fileReadAt( pArea->dbfarea.pDataFile, pSort->pRecBuff, nSize,
                                   ( HB_FOFFSET ) pArea->dbfarea.uiHeaderLen +
                                   ( HB_FOFFSET ) ( ulRecNo - 1 ) *

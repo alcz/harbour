@@ -1818,68 +1818,49 @@ HB_FUNC( DBSETRELATION )
       hb_errRT_DBCMD( EG_NOTABLE, EDBCMD_NOTABLE, NULL, HB_ERR_FUNCNAME );
 }
 
+/* __dbArrange( nToArea, aStruct, bFor, bWhile, nNext, nRecord, lRest, aFields ) */
 HB_FUNC( __DBARRANGE )
 {
-   AREAP pArea, pDestArea;
-   PHB_ITEM pStruct;
+   HB_ERRCODE errCode = HB_FAILURE;
+   AREAP pSrcArea, pDstArea;
 
-   pArea = ( AREAP ) hb_rddGetCurrentWorkAreaPointer();
-   pDestArea = ( AREAP ) hb_rddGetWorkAreaPointer( ( HB_AREANO ) hb_parni( 1 ) );
+   pSrcArea = ( AREAP ) hb_rddGetCurrentWorkAreaPointer();
+   pDstArea = ( AREAP ) hb_rddGetWorkAreaPointer( ( HB_AREANO ) hb_parni( 1 ) );
 
-   /* Fields structure of source WorkArea */
-   pStruct = hb_param( 2, HB_IT_ARRAY );
-
-   /* TODO: check what Clipper does when pDestArea == NULL or pArea == pDestArea */
-   if( pArea && pDestArea && pArea != pDestArea && pStruct )
+   /* TODO: check what Clipper does when pDstArea == NULL or pSrcArea == pDstArea */
+   if( pSrcArea && pDstArea && pSrcArea != pDstArea )
    {
-      DBSORTINFO dbSortInfo;
       HB_USHORT uiCount, uiDest;
+      DBSORTINFO dbSortInfo;
+      /* structure with fields copied copied from source WorkArea */
+      PHB_ITEM pStruct = hb_param( 2, HB_IT_ARRAY );
+      /* array with sorted fields in source WorkArea */
+      PHB_ITEM pFields = hb_param( 8, HB_IT_ARRAY );
 
       memset( &dbSortInfo, 0, sizeof( dbSortInfo ) );
-
-      dbSortInfo.dbtri.uiFlags = DBTF_PUTREC;
-      dbSortInfo.dbtri.lpaSource = pArea;
-      dbSortInfo.dbtri.lpaDest = pDestArea;
-
-      dbSortInfo.dbtri.dbsci.itmCobFor   = hb_param( 3, HB_IT_BLOCK );
-      dbSortInfo.dbtri.dbsci.lpstrFor    = NULL;
-      dbSortInfo.dbtri.dbsci.itmCobWhile = hb_param( 4, HB_IT_BLOCK );
-      dbSortInfo.dbtri.dbsci.lpstrWhile  = NULL;
-      dbSortInfo.dbtri.dbsci.lNext       = hb_param( 5, HB_IT_NUMERIC );
-      dbSortInfo.dbtri.dbsci.itmRecID    = HB_ISNIL( 6 ) ? NULL : hb_param( 6, HB_IT_ANY );
-      dbSortInfo.dbtri.dbsci.fRest       = hb_param( 7, HB_IT_LOGICAL );
-
-      dbSortInfo.dbtri.dbsci.fIgnoreFilter     =
-      dbSortInfo.dbtri.dbsci.fLast             =
-      dbSortInfo.dbtri.dbsci.fIgnoreDuplicates =
-      dbSortInfo.dbtri.dbsci.fBackward         =
-      dbSortInfo.dbtri.dbsci.fOptimized        = HB_FALSE;
-      dbSortInfo.dbtri.dbsci.fIncludeDeleted   = HB_TRUE;
-
-      dbSortInfo.dbtri.uiItemCount = ( HB_USHORT ) hb_arrayLen( pStruct );
-      if( dbSortInfo.dbtri.uiItemCount > 0 )
+      errCode = hb_dbTransStruct( pSrcArea, pDstArea, &dbSortInfo.dbtri,
+                                  NULL, pStruct );
+      if( errCode == HB_SUCCESS )
       {
-         dbSortInfo.dbtri.lpTransItems = ( LPDBTRANSITEM )
-               hb_xgrab( dbSortInfo.dbtri.uiItemCount * sizeof( DBTRANSITEM ) );
-         for( uiCount = 0; uiCount < dbSortInfo.dbtri.uiItemCount; ++uiCount )
-         {
-            const char * szName = hb_arrayGetCPtr( hb_arrayGetItemPtr( pStruct,
-                                                            uiCount + 1 ), 1 );
-            dbSortInfo.dbtri.lpTransItems[ uiCount ].uiSource =
-                                       hb_rddFieldIndex( pArea, szName );
-            dbSortInfo.dbtri.lpTransItems[ uiCount ].uiDest =
-                                       hb_rddFieldIndex( pDestArea, szName );
-            if( dbSortInfo.dbtri.lpTransItems[ uiCount ].uiSource == 0 ||
-                dbSortInfo.dbtri.lpTransItems[ uiCount ].uiDest == 0 )
-            {
-               dbSortInfo.dbtri.uiItemCount = 0;
-               break;
-            }
-         }
-      }
-      if( dbSortInfo.dbtri.uiItemCount > 0 )
-      {
-         PHB_ITEM pFields = hb_param( 8, HB_IT_ARRAY );
+         PHB_ITEM pTransItm;
+
+         dbSortInfo.dbtri.dbsci.itmCobFor   = hb_param( 3, HB_IT_BLOCK );
+         dbSortInfo.dbtri.dbsci.lpstrFor    = NULL;
+         dbSortInfo.dbtri.dbsci.itmCobWhile = hb_param( 4, HB_IT_BLOCK );
+         dbSortInfo.dbtri.dbsci.lpstrWhile  = NULL;
+         dbSortInfo.dbtri.dbsci.lNext       = hb_param( 5, HB_IT_NUMERIC );
+         dbSortInfo.dbtri.dbsci.itmRecID    = HB_ISNIL( 6 ) ? NULL : hb_param( 6, HB_IT_ANY );
+         dbSortInfo.dbtri.dbsci.fRest       = hb_param( 7, HB_IT_LOGICAL );
+
+         dbSortInfo.dbtri.dbsci.fIgnoreFilter     =
+         dbSortInfo.dbtri.dbsci.fLast             =
+         dbSortInfo.dbtri.dbsci.fIgnoreDuplicates =
+         dbSortInfo.dbtri.dbsci.fBackward         =
+         dbSortInfo.dbtri.dbsci.fOptimized        = HB_FALSE;
+         dbSortInfo.dbtri.dbsci.fIncludeDeleted   = HB_TRUE;
+
+         /* do not transfer record deleted flag to destination area */
+         dbSortInfo.dbtri.uiFlags |= DBTF_RECALL;
 
          dbSortInfo.uiItemCount = pFields ? ( HB_USHORT ) hb_arrayLen( pFields ) : 0;
          if( dbSortInfo.uiItemCount > 0 )
@@ -1904,6 +1885,8 @@ HB_FUNC( __DBARRANGE )
                if( szPos )
                {
                   *szPos++ = 0;
+                  /* It's not Cl*pper compatible, Cl*pper checks only
+                     for /D flag and ignores any /A flags [druzus] */
                   if( strchr( szPos, 'D' ) > strchr( szPos, 'A' ) )
                      dbSortInfo.lpdbsItem[ uiDest ].uiFlags |= SF_DESCEND;
                   else
@@ -1914,7 +1897,10 @@ HB_FUNC( __DBARRANGE )
                else
                   dbSortInfo.lpdbsItem[ uiDest ].uiFlags |= SF_ASCEND;
 
-               dbSortInfo.lpdbsItem[ uiDest ].uiField = hb_rddFieldExpIndex( pArea, szFieldLine );
+               /* Cl*pper sorts records using field values from source
+                  area only, destination area may not contain sorted
+                  fields at all [druzus] */
+               dbSortInfo.lpdbsItem[ uiDest ].uiField = hb_rddFieldExpIndex( pSrcArea, szFieldLine );
                /* Field found */
                if( dbSortInfo.lpdbsItem[ uiDest ].uiField != 0 )
                   ++uiDest;
@@ -1923,10 +1909,19 @@ HB_FUNC( __DBARRANGE )
             hb_xfree( szFieldLine );
          }
 
-         if( dbSortInfo.uiItemCount == 0 )
-            SELF_TRANS( pArea, &dbSortInfo.dbtri );
-         else
-            SELF_SORT( pArea, &dbSortInfo );
+         pTransItm = hb_dbTransInfoPut( NULL, &dbSortInfo.dbtri );
+         errCode = SELF_INFO( dbSortInfo.dbtri.lpaDest, DBI_TRANSREC, pTransItm );
+         if( errCode == HB_SUCCESS )
+         {
+            errCode = dbSortInfo.dbtri.uiItemCount == 0 ? HB_FAILURE :
+                      ( dbSortInfo.uiItemCount == 0 ?
+                        SELF_TRANS( pSrcArea, &dbSortInfo.dbtri ) :
+                        SELF_SORT( pSrcArea, &dbSortInfo ) );
+            SELF_INFO( dbSortInfo.dbtri.lpaDest, DBI_TRANSREC, pTransItm );
+            if( errCode == HB_SUCCESS && ( dbSortInfo.dbtri.uiFlags & DBTF_CPYCTR ) )
+               errCode = hb_dbTransCounters( &dbSortInfo.dbtri );
+         }
+         hb_itemRelease( pTransItm );
       }
 
       /* Free items */
@@ -1935,6 +1930,8 @@ HB_FUNC( __DBARRANGE )
       if( dbSortInfo.dbtri.lpTransItems )
          hb_xfree( dbSortInfo.dbtri.lpTransItems );
    }
+
+   hb_retl( errCode == HB_SUCCESS );
 }
 
 /* __dbTrans( nDstArea, aFieldsStru, bFor, bWhile, nNext, nRecord, lRest ) */
@@ -1981,12 +1978,22 @@ HB_FUNC( __DBTRANS )
             dbTransInfo.dbsci.fOptimized        = HB_FALSE;
             dbTransInfo.dbsci.fIncludeDeleted   = HB_TRUE;
 
-            pTransItm = hb_itemPutL( NULL, HB_TRUE );
-            SELF_INFO( dbTransInfo.lpaDest, DBI_TRANSREC, pTransItm );
-
-            errCode = SELF_TRANS( dbTransInfo.lpaSource, &dbTransInfo );
-
-            SELF_INFO( dbTransInfo.lpaDest, DBI_TRANSREC, pTransItm );
+            pTransItm = hb_dbTransInfoPut( NULL, &dbTransInfo );
+            errCode = SELF_INFO( dbTransInfo.lpaDest, DBI_TRANSREC, pTransItm );
+            if( errCode == HB_SUCCESS )
+            {
+               errCode = dbTransInfo.uiItemCount == 0 ? HB_FAILURE :
+                         SELF_TRANS( dbTransInfo.lpaSource, &dbTransInfo );
+               /* we always call DBI_TRANSREC second time after TRANS() method
+                * even if TRANS() failed - it's for RDDs which may need to store
+                * pointer to dbTransInfo in first call and then release it and/or
+                * clean some structures allocated for transfer operation [druzus]
+                */
+               SELF_INFO( dbTransInfo.lpaDest, DBI_TRANSREC, pTransItm );
+               if( errCode == HB_SUCCESS && ( dbTransInfo.uiFlags & DBTF_CPYCTR ) )
+                  errCode = hb_dbTransCounters( &dbTransInfo );
+            }
+            hb_itemRelease( pTransItm );
          }
 
          if( dbTransInfo.lpTransItems )
