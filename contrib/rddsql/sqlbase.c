@@ -609,9 +609,7 @@ static HB_ERRCODE sqlbaseZap( SQLBASEAREAP pArea )
    for( ulIndex = 1; ulIndex <= pArea->ulRecCount; ulIndex++ )
    {
       if( pArea->pRowFlags[ ulIndex ] & SQLDD_FLAG_CACHED )
-      {
          hb_itemRelease( ( PHB_ITEM ) pArea->pRow[ ulIndex ] );
-      }
    }
 
    pArea->ulRecCount = 0;
@@ -621,8 +619,7 @@ static HB_ERRCODE sqlbaseZap( SQLBASEAREAP pArea )
    pArea->pRowFlags = ( HB_BYTE * ) hb_xrealloc( pArea->pRowFlags, SQLDD_ROWSET_RESIZE * sizeof( HB_BYTE ) );
    pArea->ulRecMax = SQLDD_ROWSET_RESIZE;
 
-   pArea->pRecord = pArea->pRow[ 0 ];
-   pArea->bRecordFlags = pArea->pRowFlags[ 0 ];
+   pArea->fFetched = HB_TRUE;
 
    pArea->fPositioned = HB_FALSE;
 
