@@ -1481,11 +1481,23 @@ static HB_ERRCODE sqlmixGoHot( SQLMIXAREAP pArea )
 
 static HB_ERRCODE sqlmixZap( SQLMIXAREAP pArea )
 {
-   if( SELF_ORDLSTCLEAR( ( AREAP ) pArea ) == HB_FAILURE )
+   PMIXTAG pTag;
+
+   if( SUPER_ZAP( &pArea->sqlarea.area ) == HB_FAILURE )
       return HB_FAILURE;
 
-   if( SUPER_ZAP( ( AREAP ) pArea ) == HB_FAILURE )
-      return HB_FAILURE;
+   pTag = pArea->pTagList;
+
+   while( pTag )
+   {
+      if( pTag->Root )
+         hb_mixTagDestroyNode( pTag->Root );
+
+      pTag->Root = hb_mixTagCreateNode( pTag, HB_TRUE );
+      pTag->fEof = HB_TRUE;
+
+      pTag = pTag->pNext;
+   }
 
    return HB_SUCCESS;
 }

@@ -623,7 +623,7 @@ static HB_ERRCODE sqlbaseZap( SQLBASEAREAP pArea )
 
    pArea->fPositioned = HB_FALSE;
 
-   return SELF_GOTOP( ( AREAP ) pArea );
+   return SELF_GOTOP( &pArea->area );
 }
 
 
