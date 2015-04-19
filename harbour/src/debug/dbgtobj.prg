@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: dbgtobj.prg 14673 2010-06-03 14:48:23Z vszakats $
  */
 
 /*
@@ -85,6 +85,8 @@ METHOD New( oObject, cVarName, lEditable ) CLASS HBDbObject
    LOCAL xValue
 
    DEFAULT lEditable TO .T.
+
+   __dbgSetGo( __Dbg():pInfo )
 
    /* create list of object messages */
    aMessages := oObject:classSel()
