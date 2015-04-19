@@ -1,5 +1,5 @@
 /*
- * $Id: dbgtobj.prg 14673 2010-06-03 14:48:23Z vszakats $
+ * $Id$
  */
 
 /*
