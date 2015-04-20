@@ -80,6 +80,7 @@ C_SOURCES := \
    hbcom.c \
    hbcomhb.c \
    hbcrc.c \
+   hbdef.c \
    hbdyn.c \
    hbdynhb.c \
    hbfeof.c \
