@@ -1,7 +1,3 @@
-#
-# $Id$
-#
-
 ROOT := ../../../
 
 include $(TOP)$(ROOT)config/global.mk
@@ -37,6 +33,20 @@ ifneq ($(HB_HAS_ZLIB_LOCAL),)
    # To suppress new warnings in version 1.2.5
    ifneq ($(filter $(HB_COMPILER),mingw mingw64 mingwarm cygwin djgpp),)
       HB_CFLAGS += -DNO_VIZ
+   else
+      ifneq ($(filter $(HB_PLATFORM),aix),)
+         HB_CFLAGS += -DNO_VIZ
+      endif
+   endif
+   ifneq ($(filter $(HB_PLATFORM),wce),)
+      HB_CFLAGS += -D_WINCE
+   endif
+   ifeq ($(filter $(HB_PLATFORM),win wce),)
+      HB_CFLAGS += -DHAVE_UNISTD_H
+   else
+      ifneq ($(filter $(HB_COMPILER),watcom),)
+         HB_CFLAGS += -DHAVE_UNISTD_H
+      endif
    endif
    include $(TOP)$(ROOT)config/lib.mk
 else
@@ -44,9 +54,9 @@ else
    include $(TOP)$(ROOT)config/none.mk
 endif
 
-# ORIGIN http://www.zlib.net/
-# VER    1.2.5
-# URL    http://zlib.net/zlib125.zip
+# ORIGIN http://zlib.net/
+# VER    1.2.8
+# URL    http://downloads.sourceforge.net/libpng/zlib128.zip
 # DIFF   zlib.dif
 #
 # MAP    README

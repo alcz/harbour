@@ -1,7 +1,3 @@
-#
-# $Id$
-#
-
 ROOT := ../../../
 
 include $(TOP)$(ROOT)config/global.mk
@@ -28,7 +24,7 @@ C_SOURCES := \
    pngwtran.c \
    pngwutil.c \
 
-ifeq ($(filter $(HB_COMPILER),poccarm xcc),)
+ifeq ($(filter $(HB_COMPILER),poccarm xcc tcc),)
 
    _DET_DSP_NAME := libpng
    _DET_VAR_INC_ := HB_INC_PNG
@@ -47,9 +43,8 @@ ifeq ($(filter $(HB_COMPILER),poccarm xcc),)
          HB_CFLAGS += $(foreach d,$(HB_HAS_ZLIB),-I$(d))
          HB_CFLAGS_DYN := -DPNG_BUILD_DLL
 
-         ifneq ($(filter $(HB_COMPILER),djgpp dmc),)
-            HB_CFLAGS += -DPNG_NO_SNPRINTF
-         endif
+         HB_CFLAGS += -DPNG_NO_STDIO
+
          ifneq ($(filter $(HB_COMPILER),pocc pocc64 poccarm),)
             HB_CFLAGS += -DPNG_ALLOCATED
          endif
@@ -68,9 +63,9 @@ else
    include $(TOP)$(ROOT)config/none.mk
 endif
 
-# ORIGIN http://www.libpng.org/pub/png/libpng.html
-# VER    1.5.2
-# URL    http://prdownloads.sourceforge.net/libpng/libpng-1.5.2.tar.gz?download
+# ORIGIN http://libpng.org/pub/png/libpng.html
+# VER    1.6.8
+# URL    http://downloads.sourceforge.net/libpng/libpng-1.6.8.tar.gz
 # DIFF   png.dif
 #
 # MAP    LICENSE
