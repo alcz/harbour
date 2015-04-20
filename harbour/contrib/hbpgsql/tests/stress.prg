@@ -1,25 +1,21 @@
 /*
- * $Id$
- */
-
-/*
  * VERY IMPORTANT: Don't use this querys as sample, they are used for stress tests !!!
  */
 
-#include "common.ch"
-#include "postgres.ch"
+#require "hbpgsql"
 
 PROCEDURE Main( cServer, cDatabase, cUser, cPass )
+
    LOCAL conn, res, i, x
 
    LOCAL cQuery
 
-   CLEAR SCREEN
+   CLS
 
    ? "Connecting...."
-   conn := PQconnectDB( "dbname = " + cDatabase + " host = " + cServer + " user = " + cUser + " password = " + cPass + " port = 5432" )
+   conn := PQconnectdb( "dbname = " + cDatabase + " host = " + cServer + " user = " + cUser + " password = " + cPass + " port = 5432" )
 
-   ? PQstatus( conn ), PQerrormessage( conn )
+   ? PQstatus( conn ), PQerrorMessage( conn )
 
    IF PQstatus( conn ) != CONNECTION_OK
       QUIT
@@ -49,8 +45,8 @@ PROCEDURE Main( cServer, cDatabase, cUser, cPass )
    FOR i := 1 TO 10000
       @ 15, 0 SAY "Inserting values...." + Str( i )
 
-      cQuery := "INSERT INTO test(code, dept, name, sales, salary, creation) " +;
-                "VALUES( " + Str( i ) + "," + Str( i + 1 ) + ", 'DEPARTMENT NAME " + StrZero( i ) + "', 'y', " + Str( 300.49 + i ) + ", '2003-12-28' )"
+      cQuery := "INSERT INTO test(code, dept, name, sales, salary, creation) " + ;
+         "VALUES( " + Str( i ) + "," + Str( i + 1 ) + ", 'DEPARTMENT NAME " + StrZero( i ) + "', 'y', " + Str( 300.49 + i ) + ", '2003-12-28' )"
 
       PQexec( conn, cQuery )
 
@@ -75,7 +71,7 @@ PROCEDURE Main( cServer, cDatabase, cUser, cPass )
    FOR i := 2000 TO 3000
       @ 17, 0 SAY "Updating values...." + Str( i )
 
-      cQuery := "UPDATE FROM test SET salary = 400 WHERE code = " + str( i )
+      cQuery := "UPDATE FROM test SET salary = 400 WHERE code = " + Str( i )
       PQexec( conn, cQuery )
 
       IF Mod( i, 100 ) == 0

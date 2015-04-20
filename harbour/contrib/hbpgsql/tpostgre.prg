@@ -1,8 +1,4 @@
 /*
- * $Id$
- */
-
-/*
  * xHarbour Project source code:
  * PostgreSQL RDBMS low level (client api) interface code.
  *
@@ -20,7 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
+ * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
  * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
  *
@@ -48,11 +44,8 @@
  * whether to permit this exception to apply to your modifications.
  * If you do not wish that, delete this exception notice.
  *
- * See COPYING for licensing terms.
- *
  */
 
-#include "common.ch"
 #include "hbclass.ch"
 #include "postgres.ch"
 
@@ -64,6 +57,7 @@
 #define _STRU_TABLECOL              6
 
 CREATE CLASS TPQServer
+
    VAR      pDb
    VAR      lTrans
    VAR      lallCols  INIT .T.
@@ -78,7 +72,7 @@ CREATE CLASS TPQServer
    METHOD   Close()              INLINE ::Destroy()
 
    METHOD   StartTransaction()
-   METHOD   TransactionStatus()  INLINE PQtransactionstatus( ::pDb )
+   METHOD   TransactionStatus()  INLINE PQtransactionStatus( ::pDb )
    METHOD   Commit()
    METHOD   Rollback()
 
@@ -102,17 +96,16 @@ ENDCLASS
 
 
 METHOD New( cHost, cDatabase, cUser, cPass, nPort, Schema ) CLASS TPQserver
+
    LOCAL res
 
-   IF ! ISNUMBER( nPort )
-      nPort := 5432
-   ENDIF
+   hb_default( @nPort, 5432 )
 
-   ::pDB := PQconnectDB( "dbname = " + cDatabase + " host = " + cHost + " user = " + cUser + " password = " + cPass + " port = " +  hb_ntos( nPort ) )
+   ::pDB := PQconnectdb( "dbname = " + cDatabase + " host = " + cHost + " user = " + cUser + " password = " + cPass + " port = " +  hb_ntos( nPort ) )
 
    IF PQstatus( ::pDb ) != CONNECTION_OK
-       ::lError := .T.
-       ::cError := PQerrormessage( ::pDb )
+      ::lError := .T.
+      ::cError := PQerrorMessage( ::pDb )
    ELSE
       IF ! Empty( Schema )
          ::SetSchema( Schema )
@@ -128,33 +121,37 @@ METHOD New( cHost, cDatabase, cUser, cPass, nPort, Schema ) CLASS TPQserver
    RETURN self
 
 METHOD Destroy() CLASS TPQserver
+
    ::TraceOff()
    ::pDb := NIL
+
    RETURN NIL
 
 METHOD SetSchema( cSchema ) CLASS TPQserver
+
    LOCAL res
    LOCAL result := .F.
 
    IF PQstatus( ::pDb ) == CONNECTION_OK
-       ::Schema := cSchema
-       res := PQexec( ::pDB, "SET search_path TO " + cSchema )
-       result := ( PQresultStatus( res ) == PGRES_COMMAND_OK )
-       res := NIL
+      ::Schema := cSchema
+      res := PQexec( ::pDB, "SET search_path TO " + cSchema )
+      result := ( PQresultStatus( res ) == PGRES_COMMAND_OK )
+      res := NIL
    ENDIF
 
    RETURN result
 
 METHOD StartTransaction() CLASS TPQserver
+
    LOCAL res
    LOCAL lError
 
    res    := PQexec( ::pDB, "BEGIN" )
-   lError := PQresultstatus( res ) != PGRES_COMMAND_OK
+   lError := PQresultStatus( res ) != PGRES_COMMAND_OK
 
    IF lError
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ELSE
       ::lError := .F.
       ::cError := ""
@@ -163,15 +160,16 @@ METHOD StartTransaction() CLASS TPQserver
    RETURN lError
 
 METHOD Commit() CLASS TPQserver
+
    LOCAL res
    LOCAL lError
 
    res    := PQexec( ::pDB, "COMMIT" )
-   lError := PQresultstatus( res ) != PGRES_COMMAND_OK
+   lError := PQresultStatus( res ) != PGRES_COMMAND_OK
 
    IF lError
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ELSE
       ::lError := .F.
       ::cError := ""
@@ -180,15 +178,16 @@ METHOD Commit() CLASS TPQserver
    RETURN lError
 
 METHOD Rollback() CLASS TPQserver
+
    LOCAL res
    LOCAL lError
 
    res    := PQexec( ::pDB, "ROLLBACK" )
-   lError := PQresultstatus( res ) != PGRES_COMMAND_OK
+   lError := PQresultStatus( res ) != PGRES_COMMAND_OK
 
    IF lError
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ELSE
       ::lError := .F.
       ::cError := ""
@@ -197,9 +196,10 @@ METHOD Rollback() CLASS TPQserver
    RETURN lError
 
 METHOD Query( cQuery ) CLASS TPQserver
-   RETURN TPQquery():New( ::pDB, cQuery, ::lallCols, ::Schema )
+   RETURN TPQQuery():New( ::pDB, cQuery, ::lallCols, ::Schema )
 
 METHOD TableExists( cTable ) CLASS TPQserver
+
    LOCAL result := .F.
    LOCAL cQuery
    LOCAL res
@@ -210,18 +210,19 @@ METHOD TableExists( cTable ) CLASS TPQserver
 
    res := PQexec( ::pDB, cQuery )
 
-   IF PQresultstatus( res ) == PGRES_TUPLES_OK
+   IF PQresultStatus( res ) == PGRES_TUPLES_OK
       result := ( PQlastrec( res ) != 0 )
       ::lError := .F.
       ::cError := ""
    ELSE
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ENDIF
 
    RETURN result
 
 METHOD ListTables() CLASS TPQserver
+
    LOCAL result := {}
    LOCAL cQuery
    LOCAL res
@@ -233,7 +234,7 @@ METHOD ListTables() CLASS TPQserver
 
    res := PQexec( ::pDB, cQuery )
 
-   IF PQresultstatus( res ) == PGRES_TUPLES_OK
+   IF PQresultStatus( res ) == PGRES_TUPLES_OK
       FOR i := 1 TO PQlastrec( res )
          AAdd( result, PQgetvalue( res, i, 1 ) )
       NEXT
@@ -241,12 +242,13 @@ METHOD ListTables() CLASS TPQserver
       ::cError := ""
    ELSE
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ENDIF
 
    RETURN result
 
 METHOD TableStruct( cTable ) CLASS TPQserver
+
    LOCAL result := {}
    LOCAL cQuery
    LOCAL res
@@ -263,7 +265,7 @@ METHOD TableStruct( cTable ) CLASS TPQserver
 
    res := PQexec( ::pDB, cQuery )
 
-   IF PQresultstatus( res ) == PGRES_TUPLES_OK
+   IF PQresultStatus( res ) == PGRES_TUPLES_OK
 
       FOR i := 1 TO PQlastrec( res )
 
@@ -365,12 +367,13 @@ METHOD TableStruct( cTable ) CLASS TPQserver
       ::cError := ""
    ELSE
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ENDIF
 
    RETURN result
 
 METHOD CreateTable( cTable, aStruct ) CLASS TPQserver
+
    LOCAL result := .T.
    LOCAL cQuery
    LOCAL res
@@ -409,10 +412,10 @@ METHOD CreateTable( cTable, aStruct ) CLASS TPQserver
 
    res := PQexec( ::pDB, cQuery )
 
-   IF PQresultstatus( res ) != PGRES_COMMAND_OK
+   IF PQresultStatus( res ) != PGRES_COMMAND_OK
       result := .F.
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ELSE
       ::lError := .F.
       ::cError := ""
@@ -421,15 +424,16 @@ METHOD CreateTable( cTable, aStruct ) CLASS TPQserver
    RETURN result
 
 METHOD DeleteTable( cTable ) CLASS TPQserver
+
    LOCAL result := .T.
    LOCAL res
 
    res := PQexec( ::pDB, "DROP TABLE " + ::Schema + "." + cTable  )
 
-   IF PQresultstatus( res ) != PGRES_COMMAND_OK
+   IF PQresultStatus( res ) != PGRES_COMMAND_OK
       result := .F.
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ELSE
       ::lError := .F.
       ::cError := ""
@@ -438,25 +442,30 @@ METHOD DeleteTable( cTable ) CLASS TPQserver
    RETURN result
 
 METHOD TraceOn( cFile ) CLASS TPQserver
-   ::pTrace := PQcreatetrace( cFile )
+
+   ::pTrace := PQtracecreate( cFile )
 
    IF ::pTrace != NIL
       PQtrace( ::pDb, ::pTrace )
       ::lTrace := .T.
    ENDIF
+
    RETURN NIL
 
 METHOD TraceOff() CLASS TPQserver
+
    IF ::pTrace != NIL
       PQuntrace( ::pDb )
       ::pTrace := NIL
    ENDIF
 
    ::lTrace := .F.
+
    RETURN NIL
 
 
 CREATE CLASS TPQQuery
+
    VAR      pQuery
    VAR      pDB
 
@@ -493,8 +502,8 @@ CREATE CLASS TPQQuery
    METHOD   Bof()              INLINE ::lBof
    METHOD   Eof()              INLINE ::lEof
    METHOD   RecNo()            INLINE ::nRecno
-   METHOD   Lastrec()          INLINE ::nLastrec
-   METHOD   Goto(nRecno)
+   METHOD   LastRec()          INLINE ::nLastrec
+   METHOD   Goto( nRecno )
 
    METHOD   NetErr()           INLINE ::lError
    METHOD   ErrorMsg()         INLINE ::cError
@@ -510,7 +519,7 @@ CREATE CLASS TPQQuery
    METHOD   Append( oRow )
    METHOD   SetKey()
 
-   METHOD   Changed( nField )  INLINE ::aRow[ nField ] != ::aOld[ nField ]
+   METHOD   Changed( nField )  INLINE !( ::aRow[ nField ] == ::aOld[ nField ] )
    METHOD   Blank()            INLINE ::GetBlankRow()
 
    METHOD   Struct()
@@ -548,18 +557,15 @@ METHOD Destroy() CLASS TPQquery
    RETURN .T.
 
 METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
+
    LOCAL res
    LOCAL aStruct := {}
    LOCAL aTemp
    LOCAL i
    LOCAL cType, nDec, nSize
 
-   IF ! ISLOGICAL( lQuery )
-      lQuery := .T.
-   ENDIF
-   IF ! ISLOGICAL( lMeta )
-      lMeta := .T.
-   ENDIF
+   hb_default( @lQuery, .T. )
+   hb_default( @lMeta, .T. )
 
    ::Destroy()
 
@@ -576,7 +582,7 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
       res := ::pQuery
    ENDIF
 
-   ::nResultStatus := PQresultstatus( res )
+   ::nResultStatus := PQresultStatus( res )
 
    IF ::nResultStatus == PGRES_TUPLES_OK
 
@@ -588,7 +594,7 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
          /* Get some information about metadata */
          aTemp := PQmetadata( res )
 
-         IF ISARRAY( aTemp )
+         IF HB_ISARRAY( aTemp )
 
             FOR i := 1 TO Len( aTemp )
 
@@ -666,12 +672,13 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
                   cType := "K"
                ENDIF
 
-               AAdd( aStruct, { aTemp[ i ][ HBPG_META_FIELDNAME ],;
-                                cType,;
-                                nSize,;
-                                nDec,;
-                                aTemp[ i ][ HBPG_META_TABLE ],;
-                                aTemp[ i ][ HBPG_META_TABLECOL ] } )
+               AAdd( aStruct, { ;
+                  aTemp[ i ][ HBPG_META_FIELDNAME ], ;
+                  cType, ;
+                  nSize, ;
+                  nDec, ;
+                  aTemp[ i ][ HBPG_META_TABLE ], ;
+                  aTemp[ i ][ HBPG_META_TABLECOL ] } )
             NEXT
 
             ::nFields := PQfcount( res )
@@ -697,7 +704,7 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
       ::rows   := Val( PQcmdTuples( res ) )
    ELSE
       ::lError := .T.
-      ::cError := PQresultErrormessage( res )
+      ::cError := PQresultErrorMessage( res )
    ENDIF
 
    ::pQuery := res
@@ -705,6 +712,7 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
    RETURN ! ::lError
 
 METHOD Struct() CLASS TPQquery
+
    LOCAL result := Array( Len( ::aStruct ) )
    LOCAL i
 
@@ -728,9 +736,7 @@ METHOD Read() CLASS TPQquery
 
 METHOD Skip( nrecno ) CLASS TPQquery
 
-   IF ! ISNUMBER( nRecno )
-      nRecno := 1
-   ENDIF
+   hb_default( @nRecno, 1 )
 
    IF ::nRecno + nRecno > 0 .AND. ::nRecno + nRecno <= ::nLastrec
       ::nRecno := ::nRecno + nRecno
@@ -766,10 +772,11 @@ METHOD FieldPos( cField ) CLASS TPQquery
    RETURN AScan( ::aStruct, {| x | x[ _STRU_FIELDNAME ] == cField } )
 
 METHOD FieldName( nField ) CLASS TPQquery
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ELSEIF nField < 1 .OR. nField > Len( ::aStruct )
       nField := 0
    ENDIF
@@ -781,10 +788,11 @@ METHOD FieldName( nField ) CLASS TPQquery
    RETURN result
 
 METHOD FieldType( nField ) CLASS TPQquery
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ELSEIF nField < 1 .OR. nField > Len( ::aStruct )
       nField := 0
    ENDIF
@@ -796,10 +804,11 @@ METHOD FieldType( nField ) CLASS TPQquery
    RETURN result
 
 METHOD FieldLen( nField ) CLASS TPQquery
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ELSEIF nField < 1 .OR. nField > Len( ::aStruct )
       nField := 0
    ENDIF
@@ -811,10 +820,11 @@ METHOD FieldLen( nField ) CLASS TPQquery
    RETURN result
 
 METHOD FieldDec( nField ) CLASS TPQquery
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ELSEIF nField < 1 .OR. nField > Len( ::aStruct )
       nField := 0
    ENDIF
@@ -826,6 +836,7 @@ METHOD FieldDec( nField ) CLASS TPQquery
    RETURN result
 
 METHOD Delete( oRow ) CLASS TPQquery
+
    LOCAL res
    LOCAL i
    LOCAL nField
@@ -838,7 +849,7 @@ METHOD Delete( oRow ) CLASS TPQquery
 
    IF ! Empty( ::Tablename ) .AND. ! Empty( ::aKeys )
       FOR i := 1 TO Len( ::aKeys )
-         nField := oRow:Fieldpos( ::aKeys[ i ] )
+         nField := oRow:FieldPos( ::aKeys[ i ] )
          xField := oRow:FieldGetOld( nField )
 
          cWhere += ::aKeys[ i ] + " = $" + hb_ntos( i )
@@ -854,9 +865,9 @@ METHOD Delete( oRow ) CLASS TPQquery
          cQuery := "DELETE FROM " + ::Schema + "." + ::Tablename + " WHERE " + cWhere
          res := PQexecParams( ::pDB, cQuery, aParams )
 
-         IF PQresultstatus( res ) != PGRES_COMMAND_OK
+         IF PQresultStatus( res ) != PGRES_COMMAND_OK
             ::lError := .T.
-            ::cError := PQresultErrormessage( res )
+            ::cError := PQresultErrorMessage( res )
             ::rows   := 0
          ELSE
             ::lError := .F.
@@ -873,6 +884,7 @@ METHOD Delete( oRow ) CLASS TPQquery
    RETURN ! ::lError
 
 METHOD Append( oRow ) CLASS TPQquery
+
    LOCAL cQuery
    LOCAL i
    LOCAL res
@@ -887,7 +899,7 @@ METHOD Append( oRow ) CLASS TPQquery
       FOR i := 1 TO oRow:FCount()
          IF ::lallCols .OR. oRow:changed( i )
             lChanged := .T.
-            cQuery += oRow:Fieldname( i ) + ","
+            cQuery += oRow:FieldName( i ) + ","
          ENDIF
       NEXT
 
@@ -906,9 +918,9 @@ METHOD Append( oRow ) CLASS TPQquery
       IF lChanged
          res := PQexecParams( ::pDB, cQuery, aParams )
 
-         IF PQresultstatus( res ) != PGRES_COMMAND_OK
+         IF PQresultStatus( res ) != PGRES_COMMAND_OK
             ::lError := .T.
-            ::cError := PQresultErrormessage( res )
+            ::cError := PQresultErrorMessage( res )
             ::rows   := 0
          ELSE
             ::lError := .F.
@@ -926,6 +938,7 @@ METHOD Append( oRow ) CLASS TPQquery
    RETURN ! ::lError
 
 METHOD Update( oRow ) CLASS TPQquery
+
    LOCAL cQuery
    LOCAL i
    LOCAL nField
@@ -942,7 +955,7 @@ METHOD Update( oRow ) CLASS TPQquery
       cWhere := ""
       FOR i := 1 TO Len( ::aKeys )
 
-         nField := oRow:Fieldpos( ::aKeys[ i ] )
+         nField := oRow:FieldPos( ::aKeys[ i ] )
          xField := oRow:FieldGetOld( nField )
 
          cWhere += ::aKeys[ i ] + "=" + DataToSql( xField )
@@ -957,7 +970,7 @@ METHOD Update( oRow ) CLASS TPQquery
          IF ::lallcols .OR. oRow:Changed( i )
             lChanged := .T.
             nParams++
-            cQuery += oRow:Fieldname( i ) + " = $" + hb_ntos( nParams ) + ","
+            cQuery += oRow:FieldName( i ) + " = $" + hb_ntos( nParams ) + ","
             AAdd( aParams, ValueToString( oRow:FieldGet( i ) ) )
          ENDIF
       NEXT
@@ -968,9 +981,9 @@ METHOD Update( oRow ) CLASS TPQquery
 
          res := PQexecParams( ::pDB, cQuery, aParams )
 
-         IF PQresultstatus( res ) != PGRES_COMMAND_OK
+         IF PQresultStatus( res ) != PGRES_COMMAND_OK
             ::lError := .T.
-            ::cError := PQresultErrormessage( res )
+            ::cError := PQresultErrorMessage( res )
             ::rows   := 0
          ELSE
             ::lError := .F.
@@ -988,17 +1001,18 @@ METHOD Update( oRow ) CLASS TPQquery
    RETURN ! ::lError
 
 METHOD FieldGet( nField, nRow ) CLASS TPQquery
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ELSEIF nField < 1 .OR. nField > ::nFields
       nField := 0
    ENDIF
 
    IF nField > 0 .AND. ::nResultStatus == PGRES_TUPLES_OK
 
-      IF ! ISNUMBER( nRow )
+      IF ! HB_ISNUMERIC( nRow )
          nRow := ::nRecno
       ENDIF
 
@@ -1024,7 +1038,7 @@ METHOD FieldGet( nField, nRow ) CLASS TPQquery
 
       CASE "D"
          IF result != NIL
-            result := hb_SToD( StrTran( result, "-", "" ) )
+            result := hb_SToD( StrTran( result, "-" ) )
          ELSE
             result := hb_SToD()
          ENDIF
@@ -1043,12 +1057,13 @@ METHOD FieldGet( nField, nRow ) CLASS TPQquery
    RETURN result
 
 METHOD Getrow( nRow ) CLASS TPQquery
+
    LOCAL result
    LOCAL aRow
    LOCAL aOld
    LOCAL nCol
 
-   IF ! ISNUMBER( nRow )
+   IF ! HB_ISNUMERIC( nRow )
       nRow := ::nRecno
    ENDIF
 
@@ -1060,8 +1075,8 @@ METHOD Getrow( nRow ) CLASS TPQquery
          aOld := Array( ::nFields )
 
          FOR nCol := 1 TO ::nFields
-            aRow[ nCol ] := ::Fieldget( nCol, nRow )
-            aOld[ nCol ] := ::Fieldget( nCol, nRow )
+            aRow[ nCol ] := ::FieldGet( nCol, nRow )
+            aOld[ nCol ] := ::FieldGet( nCol, nRow )
          NEXT
 
          result := TPQRow():New( aRow, aOld, ::aStruct )
@@ -1074,6 +1089,7 @@ METHOD Getrow( nRow ) CLASS TPQquery
    RETURN result
 
 METHOD GetBlankRow() CLASS TPQquery
+
    LOCAL aRow := Array( ::nFields )
    LOCAL aOld := Array( ::nFields )
    LOCAL i
@@ -1103,6 +1119,7 @@ METHOD GetBlankRow() CLASS TPQquery
    RETURN TPQRow():New( aRow, aOld, ::aStruct )
 
 METHOD SetKey() CLASS TPQquery
+
    LOCAL cQuery
    LOCAL i, x
    LOCAL nTableId, xTableId := -1
@@ -1145,7 +1162,7 @@ METHOD SetKey() CLASS TPQquery
 
                res := PQexec( ::pDB, cQuery )
 
-               IF PQresultstatus( res ) == PGRES_TUPLES_OK .AND. PQlastrec( res ) != 0
+               IF PQresultStatus( res ) == PGRES_TUPLES_OK .AND. PQlastrec( res ) != 0
                   ::Tablename := RTrim( PQgetvalue( res, 1, 1 ) )
                ENDIF
 
@@ -1168,7 +1185,7 @@ METHOD SetKey() CLASS TPQquery
 
          res := PQexec( ::pDB, cQuery )
 
-         IF PQresultstatus( res ) == PGRES_TUPLES_OK .AND. PQlastrec( res ) != 0
+         IF PQresultStatus( res ) == PGRES_TUPLES_OK .AND. PQlastrec( res ) != 0
             ::aKeys := {}
 
             FOR x := 1 TO PQlastrec( res )
@@ -1183,6 +1200,7 @@ METHOD SetKey() CLASS TPQquery
    RETURN NIL
 
 CREATE CLASS TPQRow
+
    VAR      aRow
    VAR      aOld
    VAR      aStruct
@@ -1199,20 +1217,24 @@ CREATE CLASS TPQRow
    METHOD   FieldType( nField )
    METHOD   Changed( nField )     INLINE !( ::aRow[ nField ] == ::aOld[ nField ] )
    METHOD   FieldGetOld( nField ) INLINE ::aOld[ nField ]
+
 ENDCLASS
 
 
-METHOD new( row, old, struct) CLASS TPQrow
+METHOD new( row, old, struct ) CLASS TPQrow
+
    ::aRow := row
    ::aOld := old
    ::aStruct := struct
+
    RETURN self
 
 METHOD FieldGet( nField ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aRow )
@@ -1222,10 +1244,11 @@ METHOD FieldGet( nField ) CLASS TPQrow
    RETURN result
 
 METHOD FieldPut( nField, Value ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aRow )
@@ -1235,10 +1258,11 @@ METHOD FieldPut( nField, Value ) CLASS TPQrow
    RETURN result
 
 METHOD FieldName( nField ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aStruct )
@@ -1254,10 +1278,11 @@ METHOD FieldPos( cField ) CLASS TPQrow
    RETURN AScan( ::aStruct, {| x | x[ _STRU_FIELDNAME ] == cField } )
 
 METHOD FieldType( nField ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aStruct )
@@ -1267,10 +1292,11 @@ METHOD FieldType( nField ) CLASS TPQrow
    RETURN result
 
 METHOD FieldLen( nField ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aStruct )
@@ -1280,10 +1306,11 @@ METHOD FieldLen( nField ) CLASS TPQrow
    RETURN result
 
 METHOD FieldDec( nField ) CLASS TPQrow
+
    LOCAL result
 
-   IF ISCHARACTER( nField )
-      nField := ::Fieldpos( nField )
+   IF HB_ISSTRING( nField )
+      nField := ::FieldPos( nField )
    ENDIF
 
    IF nField >= 1 .AND. nField <= Len( ::aStruct )
@@ -1297,7 +1324,7 @@ STATIC FUNCTION DataToSql( xField )
    SWITCH ValType( xField )
    CASE "C"
    CASE "M"
-      RETURN "'"+ StrTran( xField, "'", " " ) + "'"
+      RETURN "'" + StrTran( xField, "'", " " ) + "'"
    CASE "D"
       RETURN DToS( xField )
    CASE "N"

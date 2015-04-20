@@ -1,8 +1,4 @@
 /*
- * $Id$
- */
-
-/*
  * Harbour Project source code:
  * PostgreSQL RDBMS low level (client api) interface code.
  *
@@ -20,7 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
+ * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
  * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
  *
@@ -47,8 +43,6 @@
  * If you write modifications of your own for Harbour, it is your choice
  * whether to permit this exception to apply to your modifications.
  * If you do not wish that, delete this exception notice.
- *
- * See COPYING for licensing terms.
  *
  */
 
@@ -80,7 +74,7 @@
 #define PQTRANS_INERROR                 3
 #define PQTRANS_UNKNOWN                 4
 
-/* PQMETADATA() positions for array returned */
+/* PQmetadata() positions for array returned */
 #define HBPG_META_FIELDNAME             1
 #define HBPG_META_FIELDTYPE             2
 #define HBPG_META_FIELDLEN              3

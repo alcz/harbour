@@ -1,14 +1,10 @@
 /*
- * $Id$
- */
-
-/*
  * Harbour Project source code:
- * dbf2pg.prg - converts a .dbf file into a Postgres table
+ * Converts a .dbf file into a Postgres table
  *
  * Copyright 2000 Maurilio Longo <maurilio.longo@libero.it>
- * (The Original file was ported from Mysql and changed by Rodrigo Moreno rodrigo_moreno@yahoo.com)
- * * www - http://harbour-project.org
+ * (The original file was ported from mysql and changed by Rodrigo Moreno rodrigo_moreno@yahoo.com)
+ * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +17,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
+ * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
  * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
  *
@@ -51,8 +47,12 @@
  *
  */
 
+#require "hbpgsql"
+
 #include "inkey.ch"
-#include "common.ch"
+#include "fileio.ch"
+
+#include "hbextcdp.ch"
 
 PROCEDURE Main( ... )
 
@@ -76,9 +76,7 @@ PROCEDURE Main( ... )
    LOCAL lUseTrans := .F.
    LOCAL cPath := "public"
 
-   SET CENTURY ON
-   SET DATE ANSI
-   SET EPOCH TO 1960
+   Set( _SET_DATEFORMAT, "yyyy-mm-dd" )
    SET DELETE ON
 
    rddSetDefault( "DBFDBT" )
@@ -131,6 +129,9 @@ PROCEDURE Main( ... )
       CASE cTok == "-e"
          cPath := hb_PValue( i++ )
 
+      CASE cTok == "-cp"
+         hb_cdpSelect( hb_PValue( i++ ) )
+
       OTHERWISE
          help()
          QUIT
@@ -138,13 +139,13 @@ PROCEDURE Main( ... )
    ENDDO
 
    // create log file
-   IF ( nHandle := FCreate( RTrim( cTable ) + ".log" ) ) == -1
+   IF ( nHandle := FCreate( RTrim( cTable ) + ".log" ) ) == F_ERROR
       ? "Cannot create log file"
       QUIT
    ENDIF
 
    USE ( cFile ) SHARED
-   aDbfStruct := DBStruct()
+   aDbfStruct := dbStruct()
 
    oServer := TPQServer():New( cHostName, cDatabase, cUser, cPassWord, NIL, cPath )
    IF oServer:NetErr()
@@ -211,47 +212,47 @@ PROCEDURE Main( ... )
       FOR i := 1 TO oTable:FCount()
          cField := Lower( oTable:FieldName( i ) )
          sType := FieldType( FieldPos( cField ) )
-         dType := oRecord:Fieldtype( i )
+         dType := oRecord:FieldType( i )
          cValue := FieldGet( FieldPos( cField ) )
 
          IF cValue != NIL
             IF dType != sType
                IF dType == "C" .AND. sType == "N"
-                 cValue := Str( cValue )
+                  cValue := Str( cValue )
 
                ELSEIF dType == "C" .AND. sType == "D"
-                 cValue := DToC( cValue )
+                  cValue := DToC( cValue )
 
                ELSEIF dType == "C" .AND. sType == "L"
-                 cValue := iif( cValue, "S", "N" )
+                  cValue := iif( cValue, "S", "N" )
 
                ELSEIF dType == "N" .AND. sType == "C"
-                 cValue := Val( cValue )
+                  cValue := Val( cValue )
 
                ELSEIF dType == "N" .AND. sType == "D"
-                 cValue := Val( DToS( cValue ) )
+                  cValue := Val( DToS( cValue ) )
 
                ELSEIF dType == "N" .AND. sType == "L"
-                 cValue := iif( cValue, 1, 0 )
+                  cValue := iif( cValue, 1, 0 )
 
                ELSEIF dType == "D" .AND. sType == "C"
-                 cValue := CToD( cValue )
+                  cValue := CToD( cValue )
 
                ELSEIF dType == "D" .AND. sType == "N"
-                 cValue := SToD( Str( cValue ) )
+                  cValue := hb_SToD( Str( cValue ) )
 
                ELSEIF dType == "L" .AND. sType == "N"
-                 cValue := ! Empty( cValue )
+                  cValue := ! Empty( cValue )
 
                ELSEIF dType == "L" .AND. sType == "C"
-                 cValue := iif( AllTrim( cValue ) $ "YySs1", .T., .F. )
+                  cValue := iif( AllTrim( cValue ) $ "YySs1", .T., .F. )
 
                ENDIF
             ENDIF
 
             IF cValue != NIL
-               IF oRecord:Fieldtype( i ) == "C" .OR. oRecord:Fieldtype( i ) == "M"
-                  oRecord:FieldPut( i, hb_oemtoansi( cValue ) )
+               IF oRecord:FieldType( i ) == "C" .OR. oRecord:FieldType( i ) == "M"
+                  oRecord:FieldPut( i, hb_StrToUTF8( cValue ) )
                ELSE
                   oRecord:FieldPut( i, cValue )
                ENDIF
@@ -259,13 +260,13 @@ PROCEDURE Main( ... )
          ENDIF
       NEXT
 
-      oTable:Append(oRecord)
+      oTable:Append( oRecord )
 
       IF oTable:NetErr()
          ?
          ? "Error Record: ", RecNo(), Left( oTable:ErrorMsg(), 70 )
          ?
-         FWrite( nHandle, "Error at record: " + Str( RecNo() ) + " Description: " + oTable:ErrorMsg() + hb_eol() )
+         FWrite( nHandle, "Error at record: " + hb_ntos( RecNo() ) + " Description: " + oTable:ErrorMsg() + hb_eol() )
       ELSE
          nCount++
       ENDIF

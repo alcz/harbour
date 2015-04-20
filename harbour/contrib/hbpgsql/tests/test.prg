@@ -1,23 +1,20 @@
-/*
- * $Id$
- */
+#require "hbpgsql"
 
-#include "postgres.ch"
+PROCEDURE Main()
 
-PROCEDURE main()
    LOCAL conn, res, aTemp, x, y, pFile
    LOCAL cDb := "test"
    LOCAL cUser := "user"
    LOCAL cPass := "pass"
 
-   CLEAR SCREEN
+   CLS
 
    conn := PQsetdbLogin( "localhost", "5432", NIL, NIL, cDb, cUser, cPass )
    ? PQdb( conn ), PQuser( conn ), PQpass( conn ), PQhost( conn ), PQport( conn ), PQtty( conn ), PQoptions( conn )
 
-   conn := PQconnectDB( "dbname = " + cDb + " host = localhost user = " + cUser + " password = " + cPass + " port = 5432" )
+   conn := PQconnectdb( "dbname = " + cDb + " host = localhost user = " + cUser + " password = " + cPass + " port = 5432" )
 
-   ? PQstatus( conn ), PQerrormessage( conn )
+   ? PQstatus( conn ), PQerrorMessage( conn )
 
    IF PQstatus( conn ) != CONNECTION_OK
       QUIT
@@ -25,15 +22,16 @@ PROCEDURE main()
 
    ? "Blocking: ", PQisnonblocking( conn ), PQsetnonblocking( conn, .T. ), PQisnonblocking( conn )
 
-   pFile := PQcreatetrace( "trace.log" )
+   pFile := PQtracecreate( "trace.log" )
    PQtrace( conn, pFile )
 
    ? "Verbose: ", PQsetErrorVerbosity( conn, 2 )
 
-   ? "Protocol: ", PQprotocolVersion( conn ),;
-     " Server Version: ", PQserverVersion( conn ),;
-     " Client Encoding: ", PQsetClientEncoding( conn, "ASCII" ),;
-     "New encode: ", PQclientEncoding( conn )
+   ? ;
+      "Protocol: ", PQprotocolVersion( conn ), ;
+      " Server Version: ", PQserverVersion( conn ), ;
+      " Client Encoding: ", PQsetClientEncoding( conn, "ASCII" ), ;
+      "New encode: ", PQclientEncoding( conn )
 
    ? PQdb( conn ), PQuser( conn ), PQpass( conn ), PQhost( conn ), PQport( conn ), PQtty( conn ), PQoptions( conn )
 
@@ -66,23 +64,23 @@ PROCEDURE main()
    FOR x := 1 TO Len( aTemp )
       ? "Linha 1: "
       FOR y := 1 TO 6
-        ?? aTemp[ x ][ y ], ", "
+         ?? aTemp[ x ][ y ], ", "
       NEXT
    NEXT
 
-   ? PQFcount( res )
+   ? PQfcount( res )
 
    ? PQlastrec( res )
 
-   ? PQGetvalue( res, 1, 2 )
+   ? PQgetvalue( res, 1, 2 )
 
    ? "Large Objects, always should be in a transaction..."
 
    PQexec( conn, "begin" )
 
-   ? ( x := lo_Import( conn, "test.prg" ) )
-   ? lo_Export( conn, x, "test.new" )
-   ? lo_Unlink( conn, x )
+   ? ( x := lo_import( conn, __FILE__ ) )
+   ? lo_export( conn, x, hb_FNameExtSet( __FILE__, ".new" ) )
+   ? lo_unlink( conn, x )
 
    PQexec( conn, "commit" )
 

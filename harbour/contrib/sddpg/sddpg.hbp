@@ -1,7 +1,3 @@
-#
-# $Id$
-#
-
 -hblib
 -inc
 
@@ -26,4 +22,6 @@
 
 -iflag={bcc}-a
 
-sddpg.c
+${hb_name}.hbx
+
+core.c

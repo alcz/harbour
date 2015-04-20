@@ -1,7 +1,3 @@
-#
-# $Id$
-#
-
 -hblib
 -inc
 
@@ -9,7 +5,7 @@
 
 -w3 -es2
 
--instfile=inc:hbrddsql.ch
+-hbx=
 
 sqlbase.c
 sqlmix.c

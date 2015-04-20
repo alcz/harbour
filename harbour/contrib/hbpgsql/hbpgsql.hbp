@@ -1,7 +1,3 @@
-#
-# $Id$
-#
-
 -hblib
 -inc
 
@@ -24,12 +20,9 @@
 
 -iflag={bcc}-a
 
--instfile=inc:postgres.ch
--instfile=inc:hbpgsql.hbx
-
-hbpgsql.hbx
+${hb_name}.hbx
 
 postgres.c
+rddcopy.c
 
 tpostgre.prg
-hdbcpg.prg
