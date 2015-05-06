@@ -667,6 +667,14 @@ METHOD Refresh( lQuery, lMeta ) CLASS TPQquery
                   cType := "C"
                   nSize := 10
 
+               ELSEIF "name" $ cType
+                  cType := "C"
+                  nSize := 64
+
+               ELSEIF "oid" $ cType
+                  cType := "N"
+                  nSize := 19
+
                ELSE
                   /* Unsuported */
                   cType := "K"
