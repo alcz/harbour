@@ -1959,7 +1959,10 @@ static PHB_PP_FILE hb_pp_FileNew( PHB_PP_STATE pState, const char * szFileName,
          pFileName->szExtension = NULL;
          if( ! fSysFile )
          {
-            if( ! pFileName->szPath || ! pFileName->szPath[ 0 ] )
+            if( pFileName->szPath )
+               file_in = hb_fopen( szFileName, fBinary ? "rb" : "r" );
+            if( ! file_in && ( ! pFileName->szPath || ( ! pFileName->szDrive &&
+                ! strchr( HB_OS_PATH_DELIM_CHR_LIST, ( HB_UCHAR ) pFileName->szPath[ 0 ] ) ) ) )
             {
                char * szFirstFName = NULL;
                pFile = pState->pFile;
@@ -1974,12 +1977,12 @@ static PHB_PP_FILE hb_pp_FileNew( PHB_PP_STATE pState, const char * szFileName,
                   PHB_FNAME pFirstFName = hb_fsFNameSplit( szFirstFName );
                   pFileName->szPath = pFirstFName->szPath;
                   hb_fsFNameMerge( szFileNameBuf, pFileName );
-                  szFileName = szFileNameBuf;
                   hb_xfree( pFirstFName );
+                  szFileName = szFileNameBuf;
                }
+               if( ! pFileName->szPath || szFirstFName )
+                  file_in = hb_fopen( szFileName, fBinary ? "rb" : "r" );
             }
-
-            file_in = hb_fopen( szFileName, fBinary ? "rb" : "r" );
             if( file_in )
                iAction = HB_PP_OPEN_OK;
             else

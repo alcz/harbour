@@ -1693,7 +1693,7 @@ HB_BOOL hb_fsSetFileTime( const char * pszFileName, long lJulian, long lMillisec
             new_value.tm_min = iMinute;
             new_value.tm_sec = iSecond;
          }
-         new_value.tm_isdst = 0;
+         new_value.tm_isdst = -1;
 
 #  if defined( HB_OS_LINUX ) && ! defined( __WATCOMC__ )
          {
@@ -3842,10 +3842,12 @@ HB_FHANDLE hb_fsExtOpen( const char * pszFileName, const char * pDefExt,
       uiFlags |= FO_CREAT;
       if( uiExFlags & FXO_UNIQUE )
          uiFlags |= FO_EXCL;
-#if ! defined( HB_USE_SHARELOCKS )
+#if defined( HB_USE_SHARELOCKS )
+      else if( ( uiExFlags & ( FXO_TRUNCATE | FXO_SHARELOCK ) ) == FXO_TRUNCATE )
+#else
       else if( uiExFlags & FXO_TRUNCATE )
-         uiFlags |= FO_TRUNC;
 #endif
+         uiFlags |= FO_TRUNC;
    }
 
    hFile = hb_fsOpen( szPath, uiFlags );
