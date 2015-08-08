@@ -57,8 +57,10 @@
 #include "hbapi.h"
 #include "hbapifs.h"
 #include "hbapierr.h"
+#include "hbapiitm.h"
 #include "hbthread.h"
 #include "hbvm.h"
+#include "directry.ch"
 
 #if defined( HB_OS_UNIX )
 #  include <sys/types.h>
@@ -463,7 +465,7 @@ static char * s_fileLinkRead( PHB_FILE_FUNCS pFuncs, const char * pszFileName )
 }
 
 static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, const char * pDefExt,
-                               HB_USHORT uiExFlags, const char * pPaths,
+                               HB_FATTR nExFlags, const char * pPaths,
                                PHB_ITEM pError )
 {
    PHB_FILE pFile = NULL;
@@ -482,9 +484,9 @@ static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, 
 
    HB_SYMBOL_UNUSED( pFuncs );
 
-   fShared = ( uiExFlags & ( FO_DENYREAD | FO_DENYWRITE | FO_EXCLUSIVE ) ) == 0;
-   fReadonly = ( uiExFlags & ( FO_READ | FO_WRITE | FO_READWRITE ) ) == FO_READ;
-   pszFile = hb_fsExtName( pszFileName, pDefExt, uiExFlags, pPaths );
+   fShared = ( nExFlags & ( FO_DENYREAD | FO_DENYWRITE | FO_EXCLUSIVE ) ) == 0;
+   fReadonly = ( nExFlags & ( FO_READ | FO_WRITE | FO_READWRITE ) ) == FO_READ;
+   pszFile = hb_fsExtName( pszFileName, pDefExt, nExFlags, pPaths );
 
    hb_vmUnlock();
 #if defined( HB_OS_UNIX )
@@ -501,14 +503,14 @@ static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, 
       pFile = hb_fileFind( statbuf.st_dev, statbuf.st_ino );
       if( pFile )
       {
-         if( ! fShared || ! pFile->shared || ( uiExFlags & FXO_TRUNCATE ) != 0 )
+         if( ! fShared || ! pFile->shared || ( nExFlags & FXO_TRUNCATE ) != 0 )
             fResult = HB_FALSE;
          else if( ! fReadonly && pFile->readonly )
             pFile = NULL;
          else
             pFile->used++;
 
-         if( ( uiExFlags & FXO_NOSEEKPOS ) == 0 )
+         if( ( nExFlags & FXO_NOSEEKPOS ) == 0 )
          {
 #  if defined( HB_OS_VXWORKS )
             fSeek  = ! S_ISFIFO( statbuf.st_mode );
@@ -524,10 +526,10 @@ static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, 
    {
       if( ! fResult )
       {
-         hb_fsSetError( ( uiExFlags & FXO_TRUNCATE ) ? 5 : 32 );
+         hb_fsSetError( ( nExFlags & FXO_TRUNCATE ) ? 5 : 32 );
          pFile = NULL;
       }
-      else if( uiExFlags & FXO_COPYNAME )
+      else if( nExFlags & FXO_COPYNAME )
          hb_strncpy( ( char * ) pszFileName, pszFile, HB_PATH_MAX - 1 );
 
       if( pError )
@@ -536,14 +538,14 @@ static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, 
          if( ! fResult )
          {
             hb_errPutOsCode( pError, hb_fsError() );
-            hb_errPutGenCode( pError, ( HB_ERRCODE ) ( ( uiExFlags & FXO_TRUNCATE ) ? EG_CREATE : EG_OPEN ) );
+            hb_errPutGenCode( pError, ( HB_ERRCODE ) ( ( nExFlags & FXO_TRUNCATE ) ? EG_CREATE : EG_OPEN ) );
          }
       }
    }
    else
 #endif
    {
-      hFile = hb_fsExtOpen( pszFileName, pDefExt, uiExFlags, pPaths, pError );
+      hFile = hb_fsExtOpen( pszFileName, pDefExt, nExFlags, pPaths, pError );
       if( hFile != FS_ERROR )
       {
          HB_ULONG device = 0, inode = 0;
@@ -556,7 +558,7 @@ static PHB_FILE s_fileExtOpen( PHB_FILE_FUNCS pFuncs, const char * pszFileName, 
          {
             device = ( HB_ULONG ) statbuf.st_dev;
             inode  = ( HB_ULONG ) statbuf.st_ino;
-            if( ( uiExFlags & FXO_NOSEEKPOS ) == 0 )
+            if( ( nExFlags & FXO_NOSEEKPOS ) == 0 )
             {
 #  if defined( HB_OS_VXWORKS )
                fSeek  = ! S_ISFIFO( statbuf.st_mode );
@@ -1201,6 +1203,49 @@ HB_BOOL hb_fileTimeSet( const char * pszFileName, long lJulian, long lMillisec )
    return hb_fsSetFileTime( pszFileName, lJulian, lMillisec );
 }
 
+HB_EXPORT HB_FOFFSET hb_fileSizeGet( const char * pszFileName, HB_BOOL bUseDirEntry )
+{
+   int i = s_fileFindDrv( pszFileName );
+
+   if( i >= 0 )
+   {
+      HB_ERRCODE uiError;
+      HB_FOFFSET nSize = 0;
+
+      if( bUseDirEntry )
+      {
+         PHB_ITEM pDir = hb_fileDirectory( pszFileName, "HS" );
+
+         uiError = hb_fsError();
+         if( pDir )
+         {
+            PHB_ITEM pEntry = hb_arrayGetItemPtr( pDir, 1 );
+
+            if( pEntry )
+               nSize = hb_arrayGetNInt( pEntry, F_SIZE );
+            hb_itemRelease( pDir );
+         }
+      }
+      else
+      {
+         PHB_FILE pFile = hb_fileExtOpen( pszFileName, NULL, FO_READ | FO_COMPAT, NULL, NULL );
+         if( pFile )
+         {
+            nSize = hb_fileSize( pFile );
+            uiError = hb_fsError();
+            hb_fileClose( pFile );
+         }
+         else
+            uiError = hb_fsError();
+      }
+      hb_fsSetFError( uiError );
+
+      return nSize;
+   }
+
+   return hb_fsFSize( pszFileName, bUseDirEntry );
+}
+
 HB_BOOL hb_fileAttrGet( const char * pszFileName, HB_FATTR * pulAttr )
 {
    int i = s_fileFindDrv( pszFileName );
@@ -1252,15 +1297,15 @@ char * hb_fileLinkRead( const char * pszFileName )
 }
 
 PHB_FILE hb_fileExtOpen( const char * pszFileName, const char * pDefExt,
-                         HB_USHORT uiExFlags, const char * pPaths,
+                         HB_FATTR nExFlags, const char * pPaths,
                          PHB_ITEM pError )
 {
    int i = s_fileFindDrv( pszFileName );
 
    if( i >= 0 )
-      return s_pFileTypes[ i ]->Open( s_pFileTypes[ i ], pszFileName, pDefExt, uiExFlags, pPaths, pError );
+      return s_pFileTypes[ i ]->Open( s_pFileTypes[ i ], pszFileName, pDefExt, nExFlags, pPaths, pError );
 
-   return s_fileExtOpen( NULL, pszFileName, pDefExt, uiExFlags, pPaths, pError );
+   return s_fileExtOpen( NULL, pszFileName, pDefExt, nExFlags, pPaths, pError );
 }
 
 void hb_fileClose( PHB_FILE pFile )

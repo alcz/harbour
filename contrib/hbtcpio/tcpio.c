@@ -78,7 +78,7 @@ static HB_BOOL s_fileAccept( PHB_FILE_FUNCS pFuncs, const char * pszFileName )
 }
 
 static PHB_FILE s_fileOpen( PHB_FILE_FUNCS pFuncs, const char * pszName,
-                            const char * pszDefExt, HB_USHORT uiExFlags,
+                            const char * pszDefExt, HB_FATTR nExFlags,
                             const char * pPaths, PHB_ITEM pError )
 {
    const char * pszHost = pszName + FILE_PREFIX_LEN, * ptr;
@@ -131,7 +131,7 @@ static PHB_FILE s_fileOpen( PHB_FILE_FUNCS pFuncs, const char * pszName,
                hb_socketSetKeepAlive( sd, HB_TRUE );
                if( hb_socketConnect( sd, pSockAddr, uiLen, timeout ) == 0 )
                {
-                  switch( uiExFlags & ( FO_READ | FO_WRITE | FO_READWRITE ) )
+                  switch( nExFlags & ( FO_READ | FO_WRITE | FO_READWRITE ) )
                   {
                      case FO_READ:
                         hb_socketShutdown( sd, HB_SOCKET_SHUT_WR );
@@ -307,7 +307,24 @@ static PHB_FILE s_fileNew( HB_SOCKET sd, int timeout )
    return pFile;
 }
 
-HB_FUNC( HB_TCPIO ) { ; }
+static PHB_FILE hb_fileFromSocket( HB_SOCKET sd )
+{
+   return sd != HB_NO_SOCKET ? s_fileNew( sd, -1 ) : NULL;
+}
+
+HB_FUNC( HB_VFFROMSOCKET )
+{
+   HB_SOCKET sd = hb_socketParam( 1 );
+   PHB_FILE pFile = hb_fileFromSocket( sd );
+
+   if( pFile )
+   {
+      hb_socketItemClear( hb_param( 1, HB_IT_POINTER ) );
+      hb_fileItemPut( hb_param( -1, HB_IT_ANY ), pFile );
+   }
+}
+
+HB_FUNC( HB_TCPIO ) {}
 
 
 HB_CALL_ON_STARTUP_BEGIN( _hb_file_tcpio_init_ )
