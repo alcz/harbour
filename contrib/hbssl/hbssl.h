@@ -1,9 +1,7 @@
 /*
- * Harbour Project source code:
  * OpenSSL API - C header.
  *
  * Copyright 2009 Viktor Szakats (vszakats.net/harbour)
- * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -50,6 +48,7 @@
 #define HBSSL_H_
 
 #include "hbapi.h"
+#include "hbsocket.h"
 
 #if defined( HB_OS_WIN )
    #if ! defined( HB_OPENSSL_STATIC )
@@ -167,6 +166,21 @@
 
 HB_EXTERN_BEGIN
 
+struct _HB_SSLSTREAM;
+typedef struct _HB_SSLSTREAM * PHB_SSLSTREAM;
+
+extern PHB_SOCKEX         hb_sockexNewSSL( HB_SOCKET sd, SSL * ssl, HB_BOOL fServer,
+                                           HB_MAXINT timeout );
+extern PHB_SSLSTREAM      hb_ssl_socketNew( HB_SOCKET sd, SSL * ssl, HB_BOOL fServer,
+                                            HB_MAXINT timeout, int * piResult );
+extern void               hb_ssl_socketClose( PHB_SSLSTREAM pStream );
+extern const char *       hb_ssl_socketErrorStr( int iError );
+extern long               hb_ssl_socketRead( PHB_SSLSTREAM pStream, HB_SOCKET sd,
+                                             void * buffer, long len, HB_MAXINT timeout );
+extern long               hb_ssl_socketWrite( PHB_SSLSTREAM pStream, HB_SOCKET sd,
+                                              const void * buffer, long len,
+                                              HB_MAXINT timeout, long * plast );
+
 extern const SSL_METHOD * hb_ssl_method_id_to_ptr( int n );
 
 extern void *             hb_BIO_is( int iParam );
@@ -177,6 +191,7 @@ extern SSL_CTX *          hb_SSL_CTX_par( int iParam );
 
 extern void *             hb_SSL_is( int iParam );
 extern SSL *              hb_SSL_par( int iParam );
+extern SSL *              hb_SSL_itemGet( PHB_ITEM pItem );
 
 extern void *             hb_SSL_SESSION_is( int iParam );
 extern SSL_SESSION *      hb_SSL_SESSION_par( int iParam );

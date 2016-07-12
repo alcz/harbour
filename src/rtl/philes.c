@@ -1,12 +1,10 @@
 /*
- * Harbour Project source code:
  * The FileSys API (Harbour level)
  *
  * Copyright 1999-2009 Viktor Szakats (vszakats.net/harbour)
  * Copyright 2008 Przemyslaw Czerpak <druzus / at / priv.onet.pl>
  * Copyright 2000 David G. Holm <dholm@jsd-llc.com>
  * Copyright 1999 Manuel Ruiz <mrt@joca.es>
- * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -549,8 +547,8 @@ HB_FUNC( HB_PREAD )
          uiError = hb_fsError();
       }
 
-      if( nSize == ( HB_SIZE ) -1 )
-         hb_retni( -1 );
+      if( nSize == ( HB_SIZE ) FS_ERROR )
+         hb_retni( FS_ERROR );
       else
          hb_retns( nSize );
       hb_fsSetFError( uiError );
@@ -576,8 +574,12 @@ HB_FUNC( HB_PWRITE )
          if( nWrite < nLen )
             nLen = nWrite;
       }
-      hb_retns( hb_fsPipeWrite( hPipe, data, nLen, hb_parnint( 4 ) ) );
+      nLen = hb_fsPipeWrite( hPipe, data, nLen, hb_parnint( 4 ) );
       hb_fsSetFError( hb_fsError() );
+      if( nLen == ( HB_SIZE ) FS_ERROR )
+         hb_retni( FS_ERROR );
+      else
+         hb_retns( nLen );
    }
    else
       hb_errRT_BASE_SubstR( EG_ARG, 4001, NULL, HB_ERR_FUNCNAME, HB_ERR_ARGS_BASEPARAMS );

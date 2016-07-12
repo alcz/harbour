@@ -1,11 +1,7 @@
 /*
- * Harbour Project source code:
- *    XWindow Console
+ * XWindow Console
  * Copyright 2003 - Giancarlo Niccolai <antispam /at/ niccolai.ws>
  * Copyright 2004/2006 - Przemyslaw Czerpak <druzus /at/ priv.onet.pl>
- *
- * www - http://harbour-project.org
- * www - http://www.xharbour.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.   If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -3943,7 +3939,17 @@ static void hb_gt_xwc_InvalidateChar( PXWND_DEF wnd,
    wnd->fInvalidChr = HB_TRUE;
 }
 
-static void hb_gt_xwc_InvalidateFull( PXWND_DEF wnd,
+static void hb_gt_xwc_InvalidateFull( PXWND_DEF wnd )
+{
+   HB_SIZE nSize = wnd->cols * wnd->rows;
+
+   while( nSize-- )
+      wnd->pCurrScr[ nSize ] = 0xFFFFFFFF;
+
+   hb_gt_xwc_InvalidateChar( wnd, 0, 0, wnd->cols - 1, wnd->rows - 1 );
+}
+
+static void hb_gt_xwc_InvalidatePart( PXWND_DEF wnd,
                                       int left, int top, int right, int bottom )
 {
    int row, col, scridx;
@@ -4116,19 +4122,18 @@ static HB_BOOL hb_gt_xwc_SetScrBuff( PXWND_DEF wnd, HB_USHORT cols, HB_USHORT ro
    if( rows <= XWC_MAX_ROWS && cols <= XWC_MAX_COLS &&
        ( wnd->cols != cols || wnd->rows != rows || wnd->pCurrScr == NULL ) )
    {
-      HB_SIZE nSize = cols * rows;
+      if( HB_GTSELF_RESIZE( wnd->pGT, rows, cols ) )
+      {
+         wnd->cols = cols;
+         wnd->rows = rows;
 
-      wnd->cols = cols;
-      wnd->rows = rows;
+         if( wnd->pCurrScr != NULL )
+            hb_xfree( wnd->pCurrScr );
+         wnd->pCurrScr = ( HB_U32 * ) hb_xgrab( cols * rows * sizeof( HB_U32 ) );
+         hb_gt_xwc_InvalidateFull( wnd );
 
-      if( wnd->pCurrScr != NULL )
-         hb_xfree( wnd->pCurrScr );
-      wnd->pCurrScr = ( HB_U32 * ) hb_xgrab( nSize * sizeof( HB_U32 ) );
-      memset( wnd->pCurrScr, 0xFF, nSize * sizeof( HB_U32 ) );
-
-      hb_gt_xwc_InvalidateChar( wnd, 0, 0, wnd->cols - 1, wnd->rows - 1 );
-
-      return HB_GTSELF_RESIZE( wnd->pGT, wnd->rows, wnd->cols );
+         return HB_TRUE;
+      }
    }
 
    return HB_FALSE;
@@ -4143,14 +4148,19 @@ static void hb_gt_xwc_CreatePixmap( PXWND_DEF wnd )
    width  = wnd->cols * wnd->fontWidth;
    height = wnd->rows * wnd->fontHeight;
 
-   if( wnd->pm )
-      XFreePixmap( wnd->dpy, wnd->pm );
+   if( ! wnd->pm || wnd->width != width || wnd->height != height )
+   {
+      if( wnd->pm )
+         XFreePixmap( wnd->dpy, wnd->pm );
 
-   wnd->pm = XCreatePixmap( wnd->dpy, wnd->window, width, height,
-                            DefaultDepth( wnd->dpy, DefaultScreen( wnd->dpy ) ) );
-   wnd->drw = wnd->pm;
-   wnd->width = width;
-   wnd->height = height;
+      wnd->pm = XCreatePixmap( wnd->dpy, wnd->window, width, height,
+                               DefaultDepth( wnd->dpy, DefaultScreen( wnd->dpy ) ) );
+      wnd->drw = wnd->pm;
+      wnd->width = width;
+      wnd->height = height;
+
+      hb_gt_xwc_InvalidateFull( wnd );
+   }
 }
 
 /* *********************************************************************** */
@@ -4393,7 +4403,7 @@ static void hb_gt_xwc_SetSelection( PXWND_DEF wnd, const char * szData, HB_SIZE 
          wnd->ClipboardData[ ulSize ] = '\0';
       }
       else
-         wnd->ClipboardData = ( unsigned char * ) szData;
+         wnd->ClipboardData = ( unsigned char * ) HB_UNCONST( szData );
 
       XSetSelectionOwner( wnd->dpy, s_atomPrimary, wnd->window, wnd->ClipboardTime );
       if( XGetSelectionOwner( wnd->dpy, s_atomPrimary ) == wnd->window )
@@ -4899,7 +4909,7 @@ static void hb_gt_xwc_Init( PHB_GT pGT, HB_FHANDLE hFilenoStdin, HB_FHANDLE hFil
 {
    PXWND_DEF wnd;
 
-   HB_TRACE( HB_TR_DEBUG, ( "hb_gt_xwc_Init(%p,%p,%p,%p)", pGT, ( void * ) ( HB_PTRDIFF ) hFilenoStdin, ( void * ) ( HB_PTRDIFF ) hFilenoStdout, ( void * ) ( HB_PTRDIFF ) hFilenoStderr ) );
+   HB_TRACE( HB_TR_DEBUG, ( "hb_gt_xwc_Init(%p,%p,%p,%p)", pGT, ( void * ) ( HB_PTRUINT ) hFilenoStdin, ( void * ) ( HB_PTRUINT ) hFilenoStdout, ( void * ) ( HB_PTRUINT ) hFilenoStderr ) );
 
 #ifdef HB_XWC_USE_LOCALE
    setlocale( LC_CTYPE, "" );
@@ -5262,9 +5272,20 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
             wnd->fontHeight = iVal;
             if( wnd->fInit )
             {
-               hb_gt_xwc_SetFont( wnd, wnd->szFontName, wnd->fontWeight,
-                                  wnd->fontHeight, wnd->szFontEncoding );
-               hb_gt_xwc_CreateWindow( wnd );
+               HB_BOOL fInit;
+               HB_XWC_XLIB_LOCK();
+               fInit = hb_gt_xwc_SetFont( wnd, wnd->szFontName, wnd->fontWeight,
+                                          wnd->fontHeight, wnd->szFontEncoding );
+               HB_XWC_XLIB_UNLOCK();
+               if( fInit )
+                  hb_gt_xwc_CreateWindow( wnd );
+            }
+            else if( wnd->xfs )
+            {
+               HB_XWC_XLIB_LOCK();
+               XFreeFont( wnd->dpy, wnd->xfs );
+               wnd->xfs = NULL;
+               HB_XWC_XLIB_UNLOCK();
             }
          }
          break;
@@ -5330,8 +5351,8 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
             {
                HB_XWC_XLIB_LOCK();
                hb_gt_xwc_ResetCharTrans( wnd );
-               hb_gt_xwc_InvalidateFull( wnd, 0, 0, wnd->cols - 1, wnd->rows );
                HB_XWC_XLIB_UNLOCK();
+               hb_gt_xwc_InvalidateFull( wnd );
             }
          }
          break;
@@ -5668,10 +5689,7 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                      {
                         HB_XWC_XLIB_LOCK();
                         if( hb_gt_xwc_setPalette( wnd ) )
-                        {
-                           memset( wnd->pCurrScr, 0xFF, wnd->cols * wnd->rows * sizeof( HB_U32 ) );
-                           hb_gt_xwc_InvalidateChar( wnd, 0, 0, wnd->cols - 1, wnd->rows - 1 );
-                        }
+                           hb_gt_xwc_InvalidateFull( wnd );
                         HB_XWC_XLIB_UNLOCK();
                      }
                   }
@@ -5701,10 +5719,7 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                {
                   HB_XWC_XLIB_LOCK();
                   if( hb_gt_xwc_setPalette( wnd ) )
-                  {
-                     memset( wnd->pCurrScr, 0xFF, wnd->cols * wnd->rows * sizeof( HB_U32 ) );
-                     hb_gt_xwc_InvalidateChar( wnd, 0, 0, wnd->cols - 1, wnd->rows - 1 );
-                  }
+                     hb_gt_xwc_InvalidateFull( wnd );
                   HB_XWC_XLIB_UNLOCK();
                }
             }
@@ -5731,7 +5746,7 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                int iHeight = hb_arrayGetNI( pInfo->pNewVal, 3 );
                int iDepth  = hb_arrayGetNI( pInfo->pNewVal, 4 );
                int iPad    = 32;
-               char * pFreeImage = NULL;
+               const char * pFreeImage = NULL;
 
                if( iDepth == 0 )
                   iDepth = DefaultDepth( wnd->dpy, DefaultScreen( wnd->dpy ) );
@@ -5743,17 +5758,18 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                      {
                         int iPitch = ( iWidth * iDepth + iPad - 1 ) / iPad;
                         if( nSize == ( HB_SIZE ) ( iHeight * iPitch ) )
-                           pFreeImage = ( char * ) hb_arrayGetCPtr( pInfo->pNewVal, 1 );
+                           pFreeImage = hb_arrayGetCPtr( pInfo->pNewVal, 1 );
                         else
                            iPad >>= 1;
                      }
                   }
                   else
-                     pFreeImage = ( char * ) hb_arrayGetPtr( pInfo->pNewVal, 1 );
+                     pFreeImage = ( const char * ) hb_arrayGetPtr( pInfo->pNewVal, 1 );
                }
                if( pFreeImage != NULL )
                   xImage = XCreateImage( wnd->dpy, DefaultVisual( wnd->dpy, DefaultScreen( wnd->dpy ) ),
-                                         iDepth, ZPixmap, 0, pFreeImage, iWidth, iHeight, iPad, 0 );
+                                         iDepth, ZPixmap, 0, ( char * ) HB_UNCONST( pFreeImage ),
+                                         iWidth, iHeight, iPad, 0 );
             }
 
             rx.left = rx.top = 0;
@@ -5816,7 +5832,7 @@ static HB_BOOL hb_gt_xwc_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
                   hb_gt_xwc_InvalidatePts( wnd, rx.left, rx.top, rx.right, rx.bottom );
                }
                else
-                  hb_gt_xwc_InvalidateFull( wnd, rx.left / wnd->fontWidth,
+                  hb_gt_xwc_InvalidatePart( wnd, rx.left / wnd->fontWidth,
                                                  rx.top / wnd->fontHeight,
                                                  rx.right / wnd->fontWidth,
                                                  rx.bottom / wnd->fontHeight );

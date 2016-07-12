@@ -1,9 +1,7 @@
 /*
- * Harbour Project source code:
  * Header file for the Extend API, Array API, misc API and base declarations
  *
  * Copyright 1999 Antonio Linares <alinares@fivetech.com>
- * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -557,7 +555,7 @@ extern void *     hb_xRefResize( void * pMem, HB_SIZE nSave, HB_SIZE nSize, HB_S
 #else
    /* NOTE: otherwise, the hb_xmemcpy and hb_xmemset functions
             will be used to copy and/or set HB_SIZE data blocks */
-extern HB_EXPORT void * hb_xmemcpy( void * pDestArg, void * pSourceArg, HB_SIZE nLen ); /* copy more than memcpy() can */
+extern HB_EXPORT void * hb_xmemcpy( void * pDestArg, const void * pSourceArg, HB_SIZE nLen ); /* copy more than memcpy() can */
 extern HB_EXPORT void * hb_xmemset( void * pDestArg, int iFill, HB_SIZE nLen ); /* set more than memset() can */
 #endif
 
@@ -995,6 +993,7 @@ extern HB_EXPORT double    hb_strVal( const char * szText, HB_SIZE nLen ); /* re
 extern HB_EXPORT HB_MAXINT hb_strValInt( const char * szText, int * iOverflow );
 extern HB_EXPORT char *    hb_strRemEscSeq( char * szText, HB_SIZE * nLen ); /* remove C ESC sequences and converts them to Clipper chars */
 extern HB_EXPORT char *    hb_numToStr( char * szBuf, HB_SIZE nSize, HB_MAXINT nNumber );
+extern HB_EXPORT char *    hb_dblToStr( char * szBuf, HB_SIZE nSize, double dNumber, int iMaxDec );
 extern HB_EXPORT double    hb_numRound( double dResult, int iDec ); /* round a number to a specific number of digits */
 extern HB_EXPORT double    hb_numInt( double dNum ); /* take the integer part of the number */
 extern HB_EXPORT void      hb_random_seed( HB_I32 seed );

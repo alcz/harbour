@@ -1,11 +1,9 @@
 /*
- * Harbour Project source code:
  * Printing subsystem for Windows using GUI printing
  *
  * Copyright 2010 Viktor Szakats (vszakats.net/harbour)
  * Copyright 2010 Xavi <jarabal/at/gmail.com>
  * Copyright 2004 Peter Rees <peter@rees.co.nz> Rees Software and Systems Ltd
- * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -91,34 +89,25 @@ HB_FUNC( WIN_BITMAPTYPE )
 
 HB_FUNC( WIN_LOADBITMAPFILE )
 {
-   char * pBuffer = NULL;
-   PHB_FILE pFile = hb_fileExtOpen( hb_parcx( 1 ), NULL,
-                                    FO_READ | FO_SHARED | FO_PRIVATE |
-                                    FXO_SHARELOCK | FXO_NOSEEKPOS,
-                                    NULL, NULL );
-   if( pFile != NULL )
-   {
-      HB_SIZE nSize = ( HB_SIZE ) hb_fileSize( pFile );
+   HB_SIZE nSize;
+   char * pBuffer = ( char * ) hb_fileLoad( hb_parcx( 1 ), HB_MAX_BMP_SIZE, &nSize );
 
+   if( pBuffer )
+   {
       /* TOFIX: No check is done on read data from disk which is a large security hole
                 and may cause GPF even in simple error cases, like invalid file content.
                 [vszakats] */
-      if( nSize > 2 && nSize <= HB_MAX_BMP_SIZE )
-      {
-         pBuffer = ( char * ) hb_xgrab( nSize + 1 );
 
-         if( hb_fileReadAt( pFile, pBuffer, nSize, 0 ) != nSize ||
-             hbwin_bitmapType( pBuffer, nSize ) == HB_WIN_BITMAP_UNKNOWN )
-         {
-            hb_xfree( pBuffer );
-            pBuffer = NULL;
-         }
-         else
-            hb_retclen_buffer( pBuffer, nSize );
+      if( nSize <= 2 || hbwin_bitmapType( pBuffer, nSize ) == HB_WIN_BITMAP_UNKNOWN )
+      {
+         hb_xfree( pBuffer );
+         pBuffer = NULL;
       }
-      hb_fileClose( pFile );
    }
-   if( pBuffer == NULL )
+
+   if( pBuffer )
+      hb_retclen_buffer( pBuffer, nSize );
+   else
       hb_retc_null();
 }
 

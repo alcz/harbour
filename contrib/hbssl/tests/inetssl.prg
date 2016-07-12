@@ -1,6 +1,5 @@
 /*
  * Copyright 2015 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
- * www - http://harbour-project.org
  */
 
 #require "hbssl"
@@ -81,7 +80,7 @@ STATIC FUNCTION Client()
                        ERR_error_string( nErr ) )
       IF nResult == 1
          ? "CLIENT: connected with", SSL_get_cipher( ssl ), "encryption."
-         DipsCertInfo( ssl, "CLIENT: " )
+         DispCertInfo( ssl, "CLIENT: " )
 
          hb_inetSendAll( sock, hb_TSToStr( hb_DateTime() ) + EOL )
          DO WHILE ! Empty( cLine := hb_inetRecvLine( sock ) )
@@ -184,7 +183,7 @@ STATIC FUNCTION LoadCertificates( ssl_ctx, cCertFile, cKeyFile )
    RETURN NIL
 
 
-STATIC FUNCTION DipsCertInfo( ssl, cWho )
+STATIC FUNCTION DispCertInfo( ssl, cWho )
    LOCAL cert
 
    IF ! Empty( cert := SSL_get_peer_certificate( ssl ) )

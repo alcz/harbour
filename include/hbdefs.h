@@ -1,9 +1,7 @@
 /*
- * Harbour Project source code:
  * Header file for compiler and runtime basic type declarations
  *
  * Copyright 1999 {list of individual authors and e-mail addresses}
- * www - http://harbour-project.org
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.txt.  If not, write to
  * the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307 USA (or visit the web site http://www.gnu.org/).
+ * Boston, MA 02111-1307 USA (or visit the web site https://www.gnu.org/).
  *
  * As a special exception, the Harbour Project gives permission for
  * additional uses of the text contained in its release of Harbour.
@@ -556,15 +554,21 @@ typedef HB_MAXUINT   HB_VMMAXUINT;
 /* typedef USHORT HB_TYPE; */
 typedef HB_U32 HB_TYPE;
 
-/* type of reference counter */
-typedef unsigned long HB_COUNTER;
-#if ULONG_MAX <= UINT32_MAX
-#  define HB_COUNTER_SIZE     4
-#else
-#  define HB_COUNTER_SIZE     8
-#endif
-
+/* type of file attributes */
 typedef HB_U32 HB_FATTR;
+
+/* type of reference counter */
+#if defined( HB_OS_WIN_64 )
+   typedef HB_ULONGLONG    HB_COUNTER;
+#  define HB_COUNTER_SIZE  8
+#else
+   typedef unsigned long   HB_COUNTER;
+#  if ULONG_MAX <= UINT32_MAX
+#     define HB_COUNTER_SIZE  4
+#  else
+#     define HB_COUNTER_SIZE  8
+#  endif
+#endif
 
 /* type for memory pointer diff */
 #if defined( HB_OS_WIN_64 )
@@ -575,6 +579,7 @@ typedef HB_U32 HB_FATTR;
    typedef unsigned long HB_PTRUINT;
 #endif
 
+/* type for file offsets */
 #if defined( HB_LONG_LONG_OFF ) || ULONG_MAX == ULONGLONG_MAX
    typedef HB_LONG HB_FOFFSET;
    /* we can add hack with double as work around what should
@@ -708,7 +713,8 @@ typedef HB_U32 HB_FATTR;
 
 
 #ifndef PFLL
-#  if defined( __BORLANDC__ ) || defined( _MSC_VER ) || defined( __MINGW32__ )
+#  if ( defined( __BORLANDC__ ) || defined( _MSC_VER ) || defined( __MINGW32__ ) ) && \
+      ! defined( __clang__ )
 #     define PFLL    "I64"
 #  else
 #     define PFLL    "ll"
@@ -1457,6 +1463,9 @@ typedef HB_U32 HB_FATTR;
 #define HB_MACRONAME_JOIN_( m1, m2 )      m1 ## m2
 
 #define HB_SIZEOFARRAY( var )       ( sizeof( var ) / sizeof( *var ) )
+
+#define HB_UNCONST( p )       ( ( void * ) ( HB_PTRUINT ) ( const void * ) ( p ) )
+#define HB_DECONST( c, p )    ( ( c ) HB_UNCONST( p ) )
 
 
 #if defined( __POCC__ ) || defined( __XCC__ )
