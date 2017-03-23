@@ -1443,14 +1443,10 @@ static LPPAGEINFO hb_nsxPageGetBuffer( LPTAGINFO pTag, HB_ULONG ulPage )
    }
 
    if( ! *pPagePtr )
-   {
       *pPagePtr = ( LPPAGEINFO ) hb_xgrabz( sizeof( HB_PAGEINFO ) );
-   }
 #ifdef HB_NSX_EXTERNAL_PAGEBUFFER
    if( ! hb_nsxPageBuffer( *pPagePtr ) )
-   {
       hb_nsxPageBuffer( *pPagePtr ) = ( HB_UCHAR * ) hb_xgrabz( NSX_PAGELEN );
-   }
 #endif
    ( *pPagePtr )->pPrev = NULL;
    ( *pPagePtr )->Page  = ulPage;
@@ -3819,7 +3815,7 @@ static void hb_nsxCreateFName( NSXAREAP pArea, const char * szBagName, HB_BOOL *
          szTagName[ 0 ] = '\0';
    }
 
-   if( ( hb_setGetDefExtension() && ! pFileName->szExtension ) || ! fName )
+   if( ! fName || ( ! pFileName->szExtension && hb_setGetDefExtension() ) )
    {
       DBORDERINFO pExtInfo;
       memset( &pExtInfo, 0, sizeof( pExtInfo ) );
@@ -5142,7 +5138,7 @@ static void hb_nsxSortStorePage( LPNSXSORTINFO pSort, LPPAGEINFO pPage )
       hb_nsxPageSave( pIndex, pPage );
 }
 
-static void hb_nsxSortAddNodeKey( LPNSXSORTINFO pSort, HB_UCHAR * pKeyVal, HB_ULONG ulRec )
+static HB_BOOL hb_nsxSortAddNodeKey( LPNSXSORTINFO pSort, HB_UCHAR * pKeyVal, HB_ULONG ulRec )
 {
    LPPAGEINFO pPage;
    HB_ULONG ulPage = 0;
@@ -5154,6 +5150,8 @@ static void hb_nsxSortAddNodeKey( LPNSXSORTINFO pSort, HB_UCHAR * pKeyVal, HB_UL
       if( pPage == NULL )
       {
          pPage = pSort->NodeList[ iLevel ] = hb_nsxPageNew( pSort->pTag, HB_TRUE );
+         if( ! pPage )
+            return HB_FALSE;
          if( iLevel == 0 )
          {
             /* executed once for first key only */
@@ -5201,16 +5199,18 @@ static void hb_nsxSortAddNodeKey( LPNSXSORTINFO pSort, HB_UCHAR * pKeyVal, HB_UL
       hb_nsxSortStorePage( pSort, pPage );
       ulPage = pPage->Page;
       hb_nsxPageRelease( pSort->pTag, pPage );
-      pSort->NodeList[ iLevel ] = hb_nsxPageNew( pSort->pTag, HB_TRUE );
+      pPage = pSort->NodeList[ iLevel ] = hb_nsxPageNew( pSort->pTag, HB_TRUE );
+      if( ! pPage )
+         return HB_FALSE;
       if( iLevel == 0 )
       {
          pSort->ulLastLeaf = ulPage;
-         hb_nsxSetPageType( pSort->NodeList[ 0 ], NSX_LEAFPAGE );
-         hb_nsxSetKeyRecSize( pSort->NodeList[ 0 ], pSort->recSize );
-         pSort->NodeList[ 0 ]->uiOffset = NSX_LEAFKEYOFFSET;
+         hb_nsxSetPageType( pPage, NSX_LEAFPAGE );
+         hb_nsxSetKeyRecSize( pPage, pSort->recSize );
+         pPage->uiOffset = NSX_LEAFKEYOFFSET;
       }
       else
-         hb_nsxSetKeyRecSize( pSort->NodeList[ iLevel ], 4 );
+         hb_nsxSetKeyRecSize( pPage, 4 );
       iLevel++;
    }
 
@@ -5221,6 +5221,8 @@ static void hb_nsxSortAddNodeKey( LPNSXSORTINFO pSort, HB_UCHAR * pKeyVal, HB_UL
       memcpy( hb_nsxBranchKeyVal( pKeyPtr ), pKeyVal, pSort->keyLen );
    }
    pPage->uiKeys++;
+
+   return HB_TRUE;
 }
 
 static void hb_nsxSortWritePage( LPNSXSORTINFO pSort )
@@ -5609,7 +5611,8 @@ static void hb_nsxSortOut( LPNSXSORTINFO pSort )
          }
       }
 #endif
-      hb_nsxSortAddNodeKey( pSort, pKeyVal, ulRec );
+      if( ! hb_nsxSortAddNodeKey( pSort, pKeyVal, ulRec ) )
+         return;
       if( ulKey < pSort->ulTotKeys - 1 )
       {
          pSort->ulLastRec = ulRec;
@@ -5632,6 +5635,8 @@ static void hb_nsxSortOut( LPNSXSORTINFO pSort )
    if( pSort->NodeList[ 0 ] == NULL )
    {
       pSort->NodeList[ 0 ] = hb_nsxPageNew( pTag, HB_TRUE );
+      if( pSort->NodeList[ 0 ] == NULL )
+         return;
       hb_nsxSetPageType( pSort->NodeList[ 0 ], NSX_LEAFPAGE );
       hb_nsxSetKeyRecSize( pSort->NodeList[ 0 ], pSort->recSize );
       pSort->NodeList[ 0 ]->uiOffset = NSX_LEAFKEYOFFSET;
@@ -6434,9 +6439,9 @@ static HB_ERRCODE hb_nsxGoCold( NSXAREAP pArea )
                            break;
                         }
                         fLck = HB_TRUE;
-                        if( ! pTag->HeadBlock || ! pTag->RootBlock )
-                           fAdd = fDel = HB_FALSE;
                      }
+                     if( ! pTag->HeadBlock || ! hb_nsxTagHeaderCheck( pTag ) )
+                        fAdd = fDel = HB_FALSE;
                      if( fDel )
                      {
                         if( hb_nsxTagKeyDel( pTag, pTag->HotKeyInfo ) )
@@ -6603,6 +6608,12 @@ static HB_ERRCODE hb_nsxOpen( NSXAREAP pArea, LPDBOPENINFO pOpenInfo )
       char szFileName[ HB_PATH_MAX ];
 
       hb_nsxCreateFName( pArea, NULL, NULL, szFileName, NULL );
+      /* CL5.2 DBFCDX and Six3 CDX/NSX RDDs looking for
+         production indexes respect SET PATH but Harbour in
+         core DBF* index RDDs is CL5.3/COMIX compatible and
+         looks for production indexes only in the directory
+         where DBF file is located and only SIXCDX Harbour
+         RDD is CL5.2/Six3 compatible [druzus] */
       if( hb_fileExists( szFileName, NULL ) ||
           DBFAREA_DATA( &pArea->dbfarea )->fStrictStruct )
       {
@@ -6964,7 +6975,7 @@ static HB_ERRCODE hb_nsxOrderCreate( NSXAREAP pArea, LPDBORDERCREATEINFO pOrderI
       if( iTag )
       {
          pTag->HeadBlock = pIndex->lpTags[ iTag - 1 ]->HeadBlock;
-         if( pIndex->lpTags[ iTag - 1 ]->RootBlock &&
+         if( hb_nsxTagHeaderCheck( pIndex->lpTags[ iTag - 1 ] ) &&
              ! hb_nsxTagPagesFree( pIndex->lpTags[ iTag - 1 ],
                                    pIndex->lpTags[ iTag - 1 ]->RootBlock ) )
          {
