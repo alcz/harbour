@@ -460,17 +460,21 @@ static void s_listenRet( HB_SOCKET sd, const char * szRootPath, HB_BOOL rpc )
       lsd->sd = sd;
       lsd->rpc = rpc;
       if( szRootPath )
-         hb_strncpy( lsd->rootPath, szRootPath, sizeof( lsd->rootPath ) - 1 );
-      else
-         hb_fsBaseDirBuff( lsd->rootPath );
-      iLen = ( int ) strlen( lsd->rootPath );
-      if( iLen > 0 )
       {
-         if( ! s_isDirSep( lsd->rootPath[ iLen - 1 ] ) )
+         if( szRootPath[0] != '\0' )
+            hb_strncpy( lsd->rootPath, szRootPath, sizeof( lsd->rootPath ) - 1 );
+         else /* empty string is translated to executable base dir */
+            hb_fsBaseDirBuff( lsd->rootPath );
+
+         iLen = ( int ) strlen( lsd->rootPath );
+         if( iLen > 0 )
          {
-            if( iLen == ( int ) sizeof( lsd->rootPath ) - 1 )
-               --iLen;
-            lsd->rootPath[ iLen ] = HB_OS_PATH_DELIM_CHR;
+            if( ! s_isDirSep( lsd->rootPath[ iLen - 1 ] ) )
+            {
+               if( iLen == ( int ) sizeof( lsd->rootPath ) - 1 )
+                  --iLen;
+               lsd->rootPath[ iLen ] = HB_OS_PATH_DELIM_CHR;
+            }
          }
       }
       lsd_ptr = ( PHB_LISTENSD * ) hb_gcAllocate( sizeof( PHB_LISTENSD ),
@@ -507,6 +511,60 @@ HB_FUNC( NETIO_RPC )
       }
    }
    hb_retl( fRPC );
+}
+
+
+/* netio_RootPath( <pConnectionSocket>,
+ *                  <cNewPath> | NIL ) -> <cOldPath>
+ */
+HB_FUNC( NETIO_ROOTPATH )
+{
+   PHB_CONSRV conn = s_consrvParam( 1 );
+
+   if( conn )
+   {
+      const char * szRootPath = hb_parc( 2 );
+
+      if( conn->rootPathLen )
+         hb_retclen( conn->rootPath, conn->rootPathLen );
+      else
+         hb_retc_null();
+
+      if( conn->filesCount > 0 ) /* with files open already, don't set anything */
+         return;
+
+      if( szRootPath )
+      {
+         int iLen;
+
+         if( szRootPath[0] != '\0' )
+            hb_strncpy( conn->rootPath, szRootPath, sizeof( conn->rootPath ) - 1 );
+         else /* empty string is translated to executable base dir */
+            hb_fsBaseDirBuff( conn->rootPath );
+
+         iLen = ( int ) strlen( conn->rootPath );
+         if( iLen > 0 )
+         {
+            if( ! s_isDirSep( conn->rootPath[ iLen - 1 ] ) )
+            {
+               if( iLen == ( int ) sizeof( conn->rootPath ) - 1 )
+                  --iLen;
+               conn->rootPath[ iLen ] = HB_OS_PATH_DELIM_CHR;
+            }
+            conn->rootPathLen = ++iLen;
+         }
+         else
+            conn->rootPathLen = 0;
+
+
+      }
+      else if( hb_pcount() > 1 ) /* NIL or anything else nullifies */
+      {
+         conn->rootPathLen = 0;
+         conn->rootPath[0] = '\0';
+      }
+
+   }
 }
 
 /* netio_RPCFilter( <pConnectionSocket>,
@@ -767,6 +825,203 @@ HB_FUNC( NETIO_SERVER )
          uiMsg = HB_GET_LE_UINT32( msgbuf );
          switch( uiMsg )
          {
+            case 0:
+               errCode = NETIO_ERR_UNKNOWN_COMMAND;
+               break;
+            case NETIO_PROC:
+               fNoAnswer = HB_TRUE;
+            case NETIO_PROCIS:
+            case NETIO_PROCW:
+            case NETIO_FUNC:
+            case NETIO_FUNCCTRL:
+               size = HB_GET_LE_UINT32( &msgbuf[ 4 ] );
+               if( size < 2 )
+                  errCode = NETIO_ERR_WRONG_PARAM;
+               else
+               {
+                  if( size > ( long ) sizeof( buffer ) )
+                     ptr = msg = ( HB_BYTE * ) hb_xgrab( size );
+                  if( ! s_srvRecvAll( conn, msg, size ) )
+                     errCode = NETIO_ERR_READ;
+                  else if( ! conn->rpc )
+                     errCode = NETIO_ERR_UNSUPPORTED;
+                  else
+                  {
+                     const char * data = ( const char * ) msg;
+                     size2 = ( long ) hb_strnlen( data, size ) + 1;
+                     if( size2 > size )
+                        errCode = NETIO_ERR_WRONG_PARAM;
+                     else
+                     {
+                        PHB_DYNS pDynSym = NULL;
+                        PHB_ITEM pItem = NULL;
+
+                        if( conn->rpcFilter )
+                        {
+                           pItem = hb_hashGetCItemPtr( conn->rpcFilter, data );
+                           if( ! pItem )
+                              errCode = NETIO_ERR_NOT_EXISTS;
+                        }
+                        else
+                        {
+                           pDynSym = hb_dynsymFindName( data );
+                           if( ! pDynSym || ! hb_dynsymIsFunction( pDynSym ) )
+                              errCode = NETIO_ERR_NOT_EXISTS;
+                        }
+
+                        if( uiMsg != NETIO_PROCIS && errCode == 0 )
+                        {
+                           if( hb_vmRequestReenter() )
+                           {
+                              HB_SIZE nSize = size - size2;
+                              HB_USHORT uiPCount = 0;
+                              HB_BOOL fSend = HB_FALSE;
+                              int iStreamType;
+
+                              iStreamID = 0;
+                              data += size2;
+                              if( pItem )
+                              {
+                                 fSend = HB_TRUE;
+                                 hb_vmPushEvalSym();
+                                 hb_vmPush( pItem );
+                              }
+                              else if( conn->rpcFunc )
+                              {
+                                 hb_vmPushSymbol( conn->rpcFunc );
+                                 hb_vmPushNil();
+                                 hb_vmPushDynSym( pDynSym );
+                                 ++uiPCount;
+                              }
+                              else
+                              {
+                                 hb_vmPushDynSym( pDynSym );
+                                 hb_vmPushNil();
+                              }
+                              if( uiMsg == NETIO_FUNCCTRL )
+                              {
+                                 iStreamID = HB_GET_LE_INT32( &msgbuf[ 8 ] );
+                                 iStreamType = HB_GET_LE_INT32( &msgbuf[ 12 ] );
+                                 hb_vmPush( hb_param( 1, HB_IT_ANY ) );
+                                 hb_vmPushInteger( iStreamID );
+                                 uiPCount += 2;
+                                 if( iStreamType != NETIO_SRVDATA &&
+                                     iStreamType != NETIO_SRVITEM )
+                                    iStreamID = 0;
+                                 if( iStreamID )
+                                 {
+                                    if( conn->mutex == NULL )
+                                       conn->mutex = hb_threadMutexCreate();
+                                    if( hb_threadMutexLock( conn->mutex ) )
+                                    {
+                                       PHB_CONSTREAM stream = ( PHB_CONSTREAM )
+                                               hb_xgrab( sizeof( HB_CONSTREAM ) );
+                                       stream->id = iStreamID;
+                                       stream->type = iStreamType;
+                                       stream->next = conn->streams;
+                                       conn->streams = stream;
+                                    }
+                                    else
+                                    {
+                                       errCode = NETIO_ERR_REFUSED;
+                                       iStreamID = 0;
+                                    }
+                                 }
+                                 else
+                                    errCode = NETIO_ERR_WRONG_PARAM;
+                              }
+                              while( nSize > 0 && errCode == 0 )
+                              {
+                                 pItem = hb_itemDeserialize( &data, &nSize );
+                                 if( ! pItem )
+                                 {
+                                    errCode = NETIO_ERR_WRONG_PARAM;
+                                    break;
+                                 }
+                                 ++uiPCount;
+                                 hb_vmPush( pItem );
+                                 hb_itemRelease( pItem );
+                              }
+                              if( errCode != 0 )
+                              {
+                                 uiPCount += 2;
+                                 do
+                                 {
+                                    hb_stackPop();
+                                 }
+                                 while( --uiPCount );
+                              }
+                              else
+                              {
+                                 if( fSend )
+                                    hb_vmSend( uiPCount );
+                                 else
+                                    hb_vmProc( uiPCount );
+                                 if( uiMsg == NETIO_FUNC || uiMsg == NETIO_FUNCCTRL )
+                                 {
+                                    HB_SIZE itmSize;
+                                    PHB_ITEM pResult = hb_stackReturnItem();
+                                    char * itmData = hb_itemSerialize( pResult, HB_SERIALIZE_NUMSIZE, &itmSize );
+                                    if( itmSize <= sizeof( buffer ) - NETIO_MSGLEN )
+                                       msg = buffer;
+                                    else if( ! ptr || itmSize > ( HB_SIZE ) size - NETIO_MSGLEN )
+                                    {
+                                       if( ptr )
+                                          hb_xfree( ptr );
+                                       ptr = msg = ( HB_BYTE * ) hb_xgrab( itmSize + NETIO_MSGLEN );
+                                    }
+                                    memcpy( msg + NETIO_MSGLEN, itmData, itmSize );
+                                    hb_xfree( itmData );
+                                    len = ( long ) itmSize;
+                                    if( iStreamID && hb_itemGetNI( pResult ) == iStreamID )
+                                    {
+                                       hb_threadMutexUnlock( conn->mutex );
+                                       iStreamID = 0;
+                                    }
+                                 }
+                              }
+                              hb_vmRequestRestore();
+                              if( iStreamID )
+                              {
+                                 PHB_CONSTREAM stream = conn->streams;
+
+                                 if( stream->id == iStreamID )
+                                 {
+                                    conn->streams = stream->next;
+                                    hb_xfree( stream );
+                                 }
+                                 hb_threadMutexUnlock( conn->mutex );
+                              }
+                           }
+                           else
+                              errCode = NETIO_ERR_REFUSED;
+                        }
+                     }
+                     if( errCode == 0 && ! fNoAnswer )
+                     {
+                        HB_PUT_LE_UINT32( &msg[ 0 ], uiMsg );
+                        HB_PUT_LE_UINT32( &msg[ 4 ], len );
+                        memset( msg + 8, '\0', NETIO_MSGLEN - 8 );
+                     }
+                  }
+               }
+               uiMsg = 0;
+               break;
+
+            default: /* if path is not set, error at any FS requests */
+               if( ! conn->rootPathLen )
+               {
+                  errCode = NETIO_ERR_WRONG_FILE_PATH;
+                  uiMsg = 0;
+               }
+               break;
+         }
+
+         switch( uiMsg )
+         {
+            case 0:
+               break;
+
             case NETIO_EXISTS:
             case NETIO_DELETE:
             case NETIO_DIREXISTS:
@@ -1420,185 +1675,6 @@ HB_FUNC( NETIO_SERVER )
                {
                   HB_PUT_LE_UINT32( &msg[ 0 ], NETIO_SRVCLOSE );
                   memset( msg + 4, '\0', NETIO_MSGLEN - 4 );
-               }
-               break;
-
-            case NETIO_PROC:
-               fNoAnswer = HB_TRUE;
-            case NETIO_PROCIS:
-            case NETIO_PROCW:
-            case NETIO_FUNC:
-            case NETIO_FUNCCTRL:
-               size = HB_GET_LE_UINT32( &msgbuf[ 4 ] );
-               if( size < 2 )
-                  errCode = NETIO_ERR_WRONG_PARAM;
-               else
-               {
-                  if( size > ( long ) sizeof( buffer ) )
-                     ptr = msg = ( HB_BYTE * ) hb_xgrab( size );
-                  if( ! s_srvRecvAll( conn, msg, size ) )
-                     errCode = NETIO_ERR_READ;
-                  else if( ! conn->rpc )
-                     errCode = NETIO_ERR_UNSUPPORTED;
-                  else
-                  {
-                     const char * data = ( const char * ) msg;
-                     size2 = ( long ) hb_strnlen( data, size ) + 1;
-                     if( size2 > size )
-                        errCode = NETIO_ERR_WRONG_PARAM;
-                     else
-                     {
-                        PHB_DYNS pDynSym = NULL;
-                        PHB_ITEM pItem = NULL;
-
-                        if( conn->rpcFilter )
-                        {
-                           pItem = hb_hashGetCItemPtr( conn->rpcFilter, data );
-                           if( ! pItem )
-                              errCode = NETIO_ERR_NOT_EXISTS;
-                        }
-                        else
-                        {
-                           pDynSym = hb_dynsymFindName( data );
-                           if( ! pDynSym || ! hb_dynsymIsFunction( pDynSym ) )
-                              errCode = NETIO_ERR_NOT_EXISTS;
-                        }
-
-                        if( uiMsg != NETIO_PROCIS && errCode == 0 )
-                        {
-                           if( hb_vmRequestReenter() )
-                           {
-                              HB_SIZE nSize = size - size2;
-                              HB_USHORT uiPCount = 0;
-                              HB_BOOL fSend = HB_FALSE;
-                              int iStreamType;
-
-                              iStreamID = 0;
-                              data += size2;
-                              if( pItem )
-                              {
-                                 fSend = HB_TRUE;
-                                 hb_vmPushEvalSym();
-                                 hb_vmPush( pItem );
-                              }
-                              else if( conn->rpcFunc )
-                              {
-                                 hb_vmPushSymbol( conn->rpcFunc );
-                                 hb_vmPushNil();
-                                 hb_vmPushDynSym( pDynSym );
-                                 ++uiPCount;
-                              }
-                              else
-                              {
-                                 hb_vmPushDynSym( pDynSym );
-                                 hb_vmPushNil();
-                              }
-                              if( uiMsg == NETIO_FUNCCTRL )
-                              {
-                                 iStreamID = HB_GET_LE_INT32( &msgbuf[ 8 ] );
-                                 iStreamType = HB_GET_LE_INT32( &msgbuf[ 12 ] );
-                                 hb_vmPush( hb_param( 1, HB_IT_ANY ) );
-                                 hb_vmPushInteger( iStreamID );
-                                 uiPCount += 2;
-                                 if( iStreamType != NETIO_SRVDATA &&
-                                     iStreamType != NETIO_SRVITEM )
-                                    iStreamID = 0;
-                                 if( iStreamID )
-                                 {
-                                    if( conn->mutex == NULL )
-                                       conn->mutex = hb_threadMutexCreate();
-                                    if( hb_threadMutexLock( conn->mutex ) )
-                                    {
-                                       PHB_CONSTREAM stream = ( PHB_CONSTREAM )
-                                               hb_xgrab( sizeof( HB_CONSTREAM ) );
-                                       stream->id = iStreamID;
-                                       stream->type = iStreamType;
-                                       stream->next = conn->streams;
-                                       conn->streams = stream;
-                                    }
-                                    else
-                                    {
-                                       errCode = NETIO_ERR_REFUSED;
-                                       iStreamID = 0;
-                                    }
-                                 }
-                                 else
-                                    errCode = NETIO_ERR_WRONG_PARAM;
-                              }
-                              while( nSize > 0 && errCode == 0 )
-                              {
-                                 pItem = hb_itemDeserialize( &data, &nSize );
-                                 if( ! pItem )
-                                 {
-                                    errCode = NETIO_ERR_WRONG_PARAM;
-                                    break;
-                                 }
-                                 ++uiPCount;
-                                 hb_vmPush( pItem );
-                                 hb_itemRelease( pItem );
-                              }
-                              if( errCode != 0 )
-                              {
-                                 uiPCount += 2;
-                                 do
-                                 {
-                                    hb_stackPop();
-                                 }
-                                 while( --uiPCount );
-                              }
-                              else
-                              {
-                                 if( fSend )
-                                    hb_vmSend( uiPCount );
-                                 else
-                                    hb_vmProc( uiPCount );
-                                 if( uiMsg == NETIO_FUNC || uiMsg == NETIO_FUNCCTRL )
-                                 {
-                                    HB_SIZE itmSize;
-                                    PHB_ITEM pResult = hb_stackReturnItem();
-                                    char * itmData = hb_itemSerialize( pResult, HB_SERIALIZE_NUMSIZE, &itmSize );
-                                    if( itmSize <= sizeof( buffer ) - NETIO_MSGLEN )
-                                       msg = buffer;
-                                    else if( ! ptr || itmSize > ( HB_SIZE ) size - NETIO_MSGLEN )
-                                    {
-                                       if( ptr )
-                                          hb_xfree( ptr );
-                                       ptr = msg = ( HB_BYTE * ) hb_xgrab( itmSize + NETIO_MSGLEN );
-                                    }
-                                    memcpy( msg + NETIO_MSGLEN, itmData, itmSize );
-                                    hb_xfree( itmData );
-                                    len = ( long ) itmSize;
-                                    if( iStreamID && hb_itemGetNI( pResult ) == iStreamID )
-                                    {
-                                       hb_threadMutexUnlock( conn->mutex );
-                                       iStreamID = 0;
-                                    }
-                                 }
-                              }
-                              hb_vmRequestRestore();
-                              if( iStreamID )
-                              {
-                                 PHB_CONSTREAM stream = conn->streams;
-
-                                 if( stream->id == iStreamID )
-                                 {
-                                    conn->streams = stream->next;
-                                    hb_xfree( stream );
-                                 }
-                                 hb_threadMutexUnlock( conn->mutex );
-                              }
-                           }
-                           else
-                              errCode = NETIO_ERR_REFUSED;
-                        }
-                     }
-                     if( errCode == 0 && ! fNoAnswer )
-                     {
-                        HB_PUT_LE_UINT32( &msg[ 0 ], uiMsg );
-                        HB_PUT_LE_UINT32( &msg[ 4 ], len );
-                        memset( msg + 8, '\0', NETIO_MSGLEN - 8 );
-                     }
-                  }
                }
                break;
 

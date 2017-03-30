@@ -155,6 +155,7 @@ Server side functions:
    netio_VerifyClient( <pConnectionSocket> ) -> <lAccepted>
    netio_Server( <pConnectionSocket> ) -> NIL
    netio_ServedConnection() -> <pConnectionSocket>
+   netio_RootPath( <pConnectionSocket> [, <cPath> ] ) -> <cPrevPath>
    netio_RPC( <pListenSocket> | <pConnectionSocket> [, <lEnable>] ) -> <lPrev>
    netio_RPCFilter( <pConnectionSocket>,
                     <sFuncSym> | <hValue> | NIL ) -> NIL
