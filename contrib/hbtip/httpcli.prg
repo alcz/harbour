@@ -529,85 +529,96 @@ METHOD Attach( cName, cFileName, cType ) CLASS TIPClientHTTP
 
 METHOD PostMultiPart( xPostData, cQuery ) CLASS TIPClientHTTP
 
-   LOCAL cData := "", nI, cTmp, y, cBound := ::boundary()
-   LOCAL cCrlf := ::cCRlf, oSub
-   LOCAL nPos
-   LOCAL cFilePath, cName, cFile, cType
-   LOCAL nFile, cBuf, nBuf, nRead
+   LOCAL cData := "", item, cBound := ::boundary()
+   LOCAL cCrlf := ::cCRlf, aAttachment, aOut
+   LOCAL cFile, cType, nRead
 
-   IF Empty( xPostData )
-   ELSEIF HB_ISHASH( xPostData )
-      y := Len( xPostData )
-      FOR nI := 1 TO y
-         cTmp := tip_URLEncode( AllTrim( hb_CStr( hb_HKeyAt( xPostData, nI ) ) ) )
-         cData += cBound + cCrlf + 'Content-Disposition: form-data; name="' + cTmp + '"' + cCrlf + cCrLf
-         cTmp := tip_URLEncode( AllTrim( hb_CStr( hb_HValueAt( xPostData, nI ) ) ) )
-         cData += cTmp + cCrLf
+   DO CASE
+   CASE Empty( xPostData )
+   CASE HB_ISHASH( xPostData )
+      FOR EACH item IN xPostData
+         cData += ;
+            cBound + cCrlf + "Content-Disposition: form-data; name=" + '"' + ;
+            tip_URLEncode( AllTrim( hb_CStr( item:__enumKey() ) ) ) + '"' + cCrlf + cCrLf + ;
+            tip_URLEncode( AllTrim( hb_CStr( item ) ) ) + cCrLf
       NEXT
-   ELSEIF HB_ISARRAY( xPostData )
-      y := Len( xPostData )
-      FOR nI := 1 TO y
-         cTmp := tip_URLEncode( AllTrim( hb_CStr( xPostData[ nI, 1 ] ) ) )
-         cData += cBound + cCrlf + 'Content-Disposition: form-data; name="' + cTmp + '"' + cCrlf + cCrLf
-         cTmp := tip_URLEncode( AllTrim( hb_CStr( xPostData[ nI, 2 ] ) ) )
-         cData += cTmp + cCrLf
-      NEXT
-
-   ELSEIF HB_ISSTRING( xPostData )
-      cData := xPostData
-   ENDIF
-
-   FOR EACH oSub IN ::aAttachments
-      cName := oSub[ 1 ]
-      cFile := oSub[ 2 ]
-      cType := oSub[ 3 ]
-      cTmp := StrTran( cFile, "/", "\" )
-      IF ( nPos := RAt( "\", cTmp ) ) != 0
-         cFilePath := Left( cTmp, nPos )
-      ELSEIF ( nPos := RAt( ":", cTmp ) ) != 0
-         cFilePath := Left( cTmp, nPos )
-      ELSE
-         cFilePath := ""
-      ENDIF
-      cTmp := SubStr( cFile, Len( cFilePath ) + 1 )
-      IF Empty( cType )
-         cType := "text/html"
-      ENDIF
-      cData += cBound + cCrlf + 'Content-Disposition: form-data; name="' + cName + '"; filename="' + cTmp + '"' + cCrlf + 'Content-Type: ' + cType + cCrLf + cCrLf
-      // hope this is not a big file....
-      nFile := FOpen( cFile )
-      /* TOFIX: Error checking on nFile. [vszakats] */
-      nBuf  := 65536
-      cBuf := Space( nBuf )
-      DO WHILE ! hb_FEof( nFile )
-         nRead := FRead( nFile, @cBuf, nBuf )
-         IF nRead == nBuf
-            cData += cBuf
-         ELSE
-            cData += hb_BLeft( cBuf, nRead )
+   CASE HB_ISARRAY( xPostData )
+      FOR EACH item IN xPostData
+         IF Len( item ) >= 2
+            cData += ;
+               cBound + cCrlf + "Content-Disposition: form-data; name=" + '"' + ;
+               tip_URLEncode( AllTrim( hb_CStr( item[ 1 ] ) ) ) + '"' + cCrlf + cCrLf + ;
+               tip_URLEncode( AllTrim( hb_CStr( item[ 2 ] ) ) ) + cCrLf
          ENDIF
-      ENDDO
-      FClose( nFile )
-      cData += cCrlf
-   NEXT
-   cData += cBound + "--" + cCrlf
+      NEXT
+   CASE HB_ISSTRING( xPostData )
+      cData := xPostData
+   ENDCASE
+
    IF ! HB_ISSTRING( cQuery )
       cQuery := ::oUrl:BuildQuery()
    ENDIF
 
-   ::inetSendAll( ::SocketCon, "POST " + cQuery + " HTTP/1.1" + ::cCRLF )
+   ::inetSendAll( ::SocketCon, "POST " + cQuery + " HTTP/1.1" + cCrlf )
    ::StandardFields()
 
    IF ! "Content-Type" $ ::hFields
-      ::inetSendAll( ::SocketCon, e"Content-Type: multipart/form-data; boundary=" + ::boundary( 2 ) + ::cCrlf )
+      ::inetSendAll( ::SocketCon, "Content-Type: multipart/form-data; boundary=" + ::boundary( 2 ) + cCrlf )
    ENDIF
 
-   ::inetSendAll( ::SocketCon, "Content-Length: " + hb_ntos( Len( cData ) ) + ::cCRLF )
-   // End of header
-   ::inetSendAll( ::SocketCon, ::cCRLF )
+   nRead := 0
+   aOut := Array( Len( ::aAttachments ) )
+   FOR EACH aAttachment IN ::aAttachments
 
-   IF ::inetErrorCode( ::SocketCon ) ==  0
-      ::inetSendAll( ::SocketCon, cData )
+      cFile := hb_defaultValue( aAttachment[ 2 ], "" )
+
+      cType := aAttachment[ 3 ]
+      IF ! HB_ISSTRING( cType ) .OR. Empty( cType )
+         cType := "text/html"
+      ENDIF
+
+      // { <cBeforeFile>, <nDataLen> }
+      aOut[ aAttachment:__enumIndex() ] := Array( 2 )
+
+      // build Content-Disposition for file
+      aOut[ aAttachment:__enumIndex() ][ 1 ] := cBound + cCrlf + ;
+         "Content-Disposition: form-data; " + ;
+         "name=" + '"' + hb_defaultValue( aAttachment[ 1 ], "unspecified" ) + '"' + "; " + ;
+         "filename=" + '"' + hb_FNameNameExt( hb_DirSepToOS( cFile ) ) + '"' + cCrlf + ;
+         "Content-Type: " + cType + cCrLf + ;
+         cCrLf
+
+      nRead += hb_BLen( aOut[ aAttachment:__enumIndex() ][ 1 ] )
+      // if file is growing, then we're going to lie here
+      nRead += aOut[ aAttachment:__enumIndex() ][ 2 ] := hb_FSize( cFile )
+      // each file also ends with line-feed before bonduary
+      nRead += hb_BLen( cCrlf )
+
+   NEXT
+
+   cData += cBound + "--" + cCrlf
+   nRead += hb_BLen( cData )
+
+   ::inetSendAll( ::SocketCon, "Content-Length: " + hb_ntos( nRead ) + cCrlf + cCrLf )
+   // End of header
+
+   FOR EACH aAttachment IN ::aAttachments
+      cFile := aAttachment[ 2 ]
+      // if file length has changed, we fail, because Content-Length is invalid
+      IF aOut[ aAttachment:__enumIndex() ][ 2 ] <> hb_FSize( cFile )
+         RETURN .F.
+      ENDIF
+      // send out Content-Disposition
+      ::inetSendAll( ::SocketCon, aOut[ aAttachment:__enumIndex() ][ 1 ] )
+      IF ! ::writeFromFile( cFile )
+         RETURN .F.
+      ENDIF
+      ::inetSendAll( ::SocketCon, cCrlf )
+   NEXT
+
+   ::inetSendAll( ::SocketCon, cData )
+
+   IF ::inetErrorCode( ::SocketCon ) == 0
       ::bInitialized := .T.
       RETURN ::ReadHeaders()
    ENDIF
