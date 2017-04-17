@@ -511,7 +511,7 @@ METHOD WriteFromFile( cFile ) CLASS tIPClient
    nSize := FSeek( nFin, 0, FS_END )
    FSeek( nFin, 0 )
 
-   nBufSize := SND_BUF_SIZE
+   nBufSize := Min( 65536, SND_BUF_SIZE )
 
    // allow initialization of the gauge
    nSent := 0
