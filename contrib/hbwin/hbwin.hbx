@@ -137,11 +137,13 @@ DYNAMIC wapi_LoadLibrary
 DYNAMIC wapi_LoadMenu
 DYNAMIC wapi_MessageBeep
 DYNAMIC wapi_MessageBox
+DYNAMIC wapi_MessageBoxTimeout
 DYNAMIC wapi_MoveToEx
 DYNAMIC wapi_MulDiv
 DYNAMIC wapi_OpenMutex
 DYNAMIC wapi_OutputDebugString
 DYNAMIC wapi_PlaySound
+DYNAMIC wapi_QueryDosDevice
 DYNAMIC wapi_QueryPerformanceCounter
 DYNAMIC wapi_QueryPerformanceFrequency
 DYNAMIC wapi_Rectangle
@@ -341,6 +343,7 @@ DYNAMIC win_OEMToANSI
 DYNAMIC win_oleAuto
 DYNAMIC win_oleAuto___OnError
 DYNAMIC win_oleAuto___OpIndex
+DYNAMIC win_oleClassExists
 DYNAMIC win_oleCreateObject
 DYNAMIC win_oleError
 DYNAMIC win_oleErrorText
@@ -432,6 +435,7 @@ DYNAMIC __oleIsDisp
 DYNAMIC __oleVariantGetType
 DYNAMIC __oleVariantGetValue
 DYNAMIC __oleVariantNew
+DYNAMIC __oleVariantNil2Null
 DYNAMIC __oleVariantNullDate
 DYNAMIC __wapi_DEVMODE_Get
 DYNAMIC __wapi_DEVMODE_New

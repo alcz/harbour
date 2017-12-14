@@ -886,6 +886,7 @@ HB_FUN_HB_MT
 HB_FUN_HB_MTVM
 HB_FUN_HB_MUTEXCREATE
 HB_FUN_HB_MUTEXEVAL
+HB_FUN_HB_MUTEXEXISTS
 HB_FUN_HB_MUTEXLOCK
 HB_FUN_HB_MUTEXNOTIFY
 HB_FUN_HB_MUTEXNOTIFYALL
@@ -1044,6 +1045,7 @@ HB_FUN_HB_STRTOUTF8
 HB_FUN_HB_STRXOR
 HB_FUN_HB_THREADDETACH
 HB_FUN_HB_THREADID
+HB_FUN_HB_THREADISMAIN
 HB_FUN_HB_THREADJOIN
 HB_FUN_HB_THREADONCE
 HB_FUN_HB_THREADONCEINIT
@@ -1916,6 +1918,7 @@ HB_FUN___TRACEPRGCALLS
 HB_FUN___TYPEFILE
 HB_FUN___VMCOUNTTHREADS
 HB_FUN___VMITEMID
+HB_FUN___VMITEMREFS
 HB_FUN___VMMODULESVERIFY
 HB_FUN___VMNOINTERNALS
 HB_FUN___WAIT
@@ -1986,6 +1989,9 @@ gzungetc
 gzvprintf
 gzwrite
 hb_adler32
+hb_arc4random
+hb_arc4random_buf
+hb_arc4random_uniform
 hb_arrayAdd
 hb_arrayAddForward
 hb_arrayBaseParams
@@ -2029,6 +2035,7 @@ hb_arrayIsObject
 hb_arrayLast
 hb_arrayLen
 hb_arrayNew
+hb_arrayRefs
 hb_arrayRevScan
 hb_arrayScan
 hb_arraySelfParams
@@ -2159,6 +2166,7 @@ hb_cmdargInit
 hb_cmdargIsInternal
 hb_cmdargProgName
 hb_codeblockId
+hb_codeblockRefs
 hb_comClose
 hb_comDiscardChar
 hb_comErrorChar
@@ -2700,6 +2708,7 @@ hb_hashJoin
 hb_hashLen
 hb_hashNew
 hb_hashPreallocate
+hb_hashRefs
 hb_hashRemove
 hb_hashScan
 hb_hashScanSoft
@@ -3556,6 +3565,7 @@ hb_vmSuspendThreads
 hb_vmSymbolInit_RT
 hb_vmTerminateThreads
 hb_vmThreadInit
+hb_vmThreadIsMain
 hb_vmThreadQuit
 hb_vmThreadQuitRequest
 hb_vmThreadRegister
