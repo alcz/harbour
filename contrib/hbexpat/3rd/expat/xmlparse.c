@@ -846,7 +846,11 @@ gather_time_entropy(void)
 
 static unsigned long
 ENTROPY_DEBUG(const char * label, unsigned long entropy) {
+#ifdef _WINCE
+  const char * const EXPAT_ENTROPY_DEBUG = NULL;
+#else
   const char * const EXPAT_ENTROPY_DEBUG = getenv("EXPAT_ENTROPY_DEBUG");
+#endif
   if (EXPAT_ENTROPY_DEBUG && ! strcmp(EXPAT_ENTROPY_DEBUG, "1")) {
     fprintf(stderr, "Entropy: %s --> 0x%0*lx (%lu bytes)\n",
         label,
@@ -7203,7 +7207,7 @@ copyString(const XML_Char *s,
     charsRequired++;
 
     /* Now allocate space for the copy */
-    result = memsuite->malloc_fcn(charsRequired * sizeof(XML_Char));
+    result = (XML_Char *) memsuite->malloc_fcn(charsRequired * sizeof(XML_Char));
     if (result == NULL)
         return NULL;
     /* Copy the original into place */
