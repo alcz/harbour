@@ -644,6 +644,7 @@ HB_FUN_HB_HSET
 HB_FUN_HB_HSETAUTOADD
 HB_FUN_HB_HSETBINARY
 HB_FUN_HB_HSETCASEMATCH
+HB_FUN_HB_HSETDEF
 HB_FUN_HB_HSETORDER
 HB_FUN_HB_HSORT
 HB_FUN_HB_HVALUEAT
@@ -2742,11 +2743,14 @@ hb_inkeySetText
 hb_iswin10
 hb_iswin2k
 hb_iswin2k3
+hb_iswin7
 hb_iswin8
 hb_iswin81
 hb_iswin9x
 hb_iswince
+hb_iswine
 hb_iswinnt
+hb_iswinsp
 hb_iswinver
 hb_iswinvista
 hb_itemArrayGet
@@ -2860,6 +2864,7 @@ hb_itemStrICmp
 hb_itemString
 hb_itemSwap
 hb_itemType
+hb_itemTypeCmp
 hb_itemTypeStr
 hb_itemUnRef
 hb_itemUnRefOnce
