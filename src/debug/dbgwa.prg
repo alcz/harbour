@@ -195,7 +195,7 @@ STATIC PROCEDURE DlgWorkAreaPaint( oDlg, aBrw )
    aBrw[ 1 ]:ForceStable()
    aBrw[ 2 ]:ForceStable()
    aBrw[ 3 ]:ForceStable()
-   aEval( aBrw, {| a, i | iif( oDebug:nWaFocus == i, a:HiLite(), a:DeHilite() ) } )
+   AEval( aBrw, {| a, i | iif( oDebug:nWaFocus == i, a:HiLite(), a:DeHilite() ) } )
 
    UpdateInfo( oDlg, Alias() )
 
