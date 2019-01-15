@@ -522,10 +522,22 @@ HB_FUNC( HBXML_NODE_UNLINK )
 static void mxml_node_insert_before( PHB_ITEM pTg, PHB_ITEM pNode )
 {
    PHB_ITEM pParent;
+   PHB_ITEM pPrev;
 
    /* Move tg->prev into node->prev */
    hb_objSendMsg( pTg, "OPREV", 0 );
+   pPrev = hb_itemNew( hb_param( -1, HB_IT_ANY ) );
    hb_objSendMsg( pNode, "_OPREV", 1, hb_param( -1, HB_IT_ANY ) );
+
+   /* if the previous is not null, and if his next was tg, we must update to node */
+   if( ! HB_IS_NIL( pPrev ) )
+   {
+      hb_objSendMsg( pPrev, "ONEXT", 0 );
+      if( hb_arrayId( hb_param( -1, HB_IT_ANY ) ) == hb_arrayId( pTg ) )
+      {
+         hb_objSendMsg( pPrev, "_ONEXT", 1, pNode );
+      }
+   }
 
    /* tg->prev is now pnode! */
    hb_objSendMsg( pTg, "_OPREV", 1, pNode );
@@ -1623,6 +1635,9 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
    pChild = hb_itemNew( NULL );
    pItem  = hb_itemNew( NULL );
 
+   if( style & MXML_STYLE_NONEWLINE )
+      style &= ~MXML_STYLE_INDENT;
+
    if( style & MXML_STYLE_INDENT )
    {
       hb_objSendMsg( pNode, "DEPTH", 0 );
@@ -1653,7 +1668,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
          if( HB_IS_NIL( pItem ) && HB_IS_NIL( pChild ) )
          {
             mxml_output_string_len( out, "/>", 2 );
-            mxml_output_string( out, hb_conNewLine() );
+            if( ! ( style & MXML_STYLE_NONEWLINE ) )
+               mxml_output_string( out, hb_conNewLine() );
          }
          else
          {
@@ -1664,7 +1680,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             if( ! HB_IS_NIL( pChild ) )
             {
                mustIndent = 1;
-               mxml_output_string( out, hb_conNewLine() );
+               if( ! ( style & MXML_STYLE_NONEWLINE ) )
+                  mxml_output_string( out, hb_conNewLine() );
 
                while( ! HB_IS_NIL( pChild ) )
                {
@@ -1693,7 +1710,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             hb_objSendMsg( pNode, "CNAME", 0 );
             mxml_output_string_len( out, hb_parc( -1 ), hb_parclen( -1 ) );
             mxml_output_char( out, '>' );
-            mxml_output_string( out, hb_conNewLine() );
+            if( ! ( style & MXML_STYLE_NONEWLINE ) )
+               mxml_output_string( out, hb_conNewLine() );
          }
          break;
 
@@ -1702,15 +1720,17 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
          hb_objSendMsg( pNode, "CDATA", 0 );
          mxml_output_string_len( out, hb_parc( -1 ), hb_parclen( -1 ) );
          mxml_output_string_len( out, " -->", 4 );
-         mxml_output_string( out, hb_conNewLine() );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
 
       case MXML_TYPE_CDATA:
          mxml_output_string_len( out, "<![CDATA[ ", 9 );
          hb_objSendMsg( pNode, "CDATA", 0 );
          mxml_output_string_len( out, hb_parc( -1 ), hb_parclen( -1 ) );
-         mxml_output_string_len( out, " ]]>", 4 );
-         mxml_output_string( out, hb_conNewLine() );
+         mxml_output_string_len( out, "]]>", 3 );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
 
       case MXML_TYPE_DATA:
@@ -1719,7 +1739,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             mxml_output_string_escape( out, hb_parcx( -1 ) );
          else
             mxml_output_string_len( out, hb_parcx( -1 ), hb_parclen( -1 ) );
-         mxml_output_string( out, hb_conNewLine() );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
 
       case MXML_TYPE_DIRECTIVE:
@@ -1735,7 +1756,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             mxml_output_string_len( out, hb_parcx( -1 ), hb_parclen( -1 ) );
          }
          mxml_output_char( out, '>' );
-         mxml_output_string( out, hb_conNewLine() );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
 
       case MXML_TYPE_PI:
@@ -1750,7 +1772,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             mxml_output_string_len( out, hb_parcx( -1 ), hb_parclen( -1 ) );
          }
          mxml_output_string_len( out, "?>", 2 );
-         mxml_output_string( out, hb_conNewLine() );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
 
       case MXML_TYPE_DOCUMENT:
@@ -1763,7 +1786,8 @@ static MXML_STATUS mxml_node_write( MXML_OUTPUT * out, PHB_ITEM pNode, int style
             hb_objSendMsg( pChild, "ONEXT", 0 );
             hb_itemMove( pChild, hb_param( -1, HB_IT_ANY ) );
          }
-         mxml_output_string( out, hb_conNewLine() );
+         if( ! ( style & MXML_STYLE_NONEWLINE ) )
+            mxml_output_string( out, hb_conNewLine() );
          break;
    }
 
