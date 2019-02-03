@@ -210,6 +210,8 @@ static HB_USHORT sqlite3DeclType(sqlite3_stmt * st, HB_USHORT uiIndex )
       /* types not handled in a specific way by SQLITE3
        * but anyway we should try to look at declarations
        */
+      if( hb_strAtI( "TIME", 4, szDeclType, nLen ) != 0 )
+         return HB_FT_TIMESTAMP;
       if( hb_strAtI( "DATE", 4, szDeclType, nLen ) != 0 )
          return HB_FT_DATE;
       if( hb_strAtI( "NUME", 4, szDeclType, nLen ) != 0 ||
@@ -267,7 +269,8 @@ static HB_ERRCODE sqlite3Disconnect( SQLDDCONNECTION * pConnection )
    HB_ERRCODE errCode;
 
    errCode = sqlite3_close( ( ( SDDCONN * ) pConnection->pSDDConn )->pDb ) ? HB_SUCCESS : HB_FAILURE;
-   hb_xfree( pConnection->pSDDConn );
+   if( errCode == HB_SUCCESS )
+      hb_xfree( pConnection->pSDDConn );
    return errCode;
 }
 
@@ -471,6 +474,11 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
             hb_itemPutNDDec( pItem, 0.0, dbFieldInfo.uiDec );
             break;
          }
+
+         case HB_FT_TIMESTAMP:
+            dbFieldInfo.uiLen = 8;
+            hb_itemPutTDT( pItem, 0, 0 );
+            break;
 #endif
 
          case HB_FT_ANY:
@@ -594,12 +602,25 @@ static HB_ERRCODE sqlite3GoTo( SQLBASEAREAP pArea, HB_ULONG ulRecNo )
                   szDate[ 8 ] = '\0';
                   pItem = hb_itemPutDS( NULL, szDate );
                }
+               else if( sqlite3_column_bytes( st, ui ) == 8 )
+                  pItem = hb_itemPutDS( NULL, ( const char * ) sqlite3_column_text( st, ui ) );
+
                break;
+
+            case HB_FT_TIMESTAMP:
+               if( sqlite3_column_bytes( st, ui ) >= 10 )
+               {
+                  long lDate, lTime;
+                  const char * pValue = ( const char * ) sqlite3_column_text( st, ui );
+
+                  hb_timeStampStrGetDT( pValue, &lDate, &lTime );
+                  pItem = hb_itemPutTDT( NULL, lDate, lTime );
+                  break;
+               }
 #endif
             case HB_FT_BLOB:
                pItem = hb_itemPutCL( NULL, ( const char * ) sqlite3_column_blob( st, ui ), sqlite3_column_bytes( st, ui ) );
                break;
-
          }
 
          if( pItem )
