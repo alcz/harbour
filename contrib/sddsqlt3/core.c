@@ -204,7 +204,18 @@ static HB_USHORT sqlite3DeclType(sqlite3_stmt * st, HB_USHORT uiIndex )
       if( hb_strAtI( "REAL", 4, szDeclType, nLen ) != 0 ||
           hb_strAtI( "FLOA", 4, szDeclType, nLen ) != 0 ||
           hb_strAtI( "DOUB", 4, szDeclType, nLen ) != 0 )
+         return HB_FT_LONG; /* logically HB_FT_DOUBLE, what was the idea? */
+#define HB_SQLT3_MAP_DECLARED_EMULATED
+#ifdef HB_SQLT3_MAP_DECLARED_EMULATED
+      /* types not handled in a specific way by SQLITE3
+       * but anyway we should try to look at declarations
+       */
+      if( hb_strAtI( "DATE", 4, szDeclType, nLen ) != 0 )
+         return HB_FT_DATE;
+      if( hb_strAtI( "NUME", 4, szDeclType, nLen ) != 0 ||
+          hb_strAtI( "NUMB", 4, szDeclType, nLen ) != 0 )
          return HB_FT_LONG;
+#endif
    }
 
 #ifdef HB_SQLT3_MAP_UNDECLARED_TYPES_AS_ANY
@@ -300,6 +311,7 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
    HB_ERRCODE     errCode;
    char *         szError;
    HB_BOOL        bError;
+   int            iError;
 
    pArea->pSDDData = memset( hb_xgrab( sizeof( SDDDATA ) ), 0, sizeof( SDDDATA ) );
    pSDDData        = ( SDDDATA * ) pArea->pSDDData;
@@ -323,7 +335,9 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
       hb_itemRelease( pItem );
    }
 
-   if( sqlite3_step( st ) != SQLITE_ROW )
+   if( ( iError = sqlite3_step( st ) ) == SQLITE_DONE )
+      pArea->fFetched = HB_TRUE;
+   else if( iError != SQLITE_ROW )
    {
       szError = sqlite3GetError( pDb, &errCode );
       hb_errRT_SQLT3DD( EG_OPEN, ESQLDD_INVALIDQUERY, szError, pArea->szQuery, errCode );
@@ -377,11 +391,87 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
             hb_itemPutNInt( pItem, 0 );
             break;
 
+#ifndef HB_SQLT3_MAP_DECLARED_EMULATED
          case HB_FT_LONG:
             dbFieldInfo.uiLen = 20;
             dbFieldInfo.uiDec = ( HB_USHORT ) hb_setGetDecimals();
             hb_itemPutNDDec( pItem, 0.0, dbFieldInfo.uiDec );
             break;
+
+#else /* HB_SQLT3_MAP_DECLARED_EMULATED */
+         case HB_FT_DATE:
+            dbFieldInfo.uiLen = 8;
+            hb_itemPutDS( pItem, NULL );
+            break;
+
+         case HB_FT_LONG:
+         {
+            const char * szDeclType = sqlite3_column_decltype( st, uiIndex );
+
+            dbFieldInfo.uiLen = 20;
+            dbFieldInfo.uiDec = ( HB_USHORT ) hb_setGetDecimals();
+
+            if( szDeclType != NULL )
+            {
+               HB_SIZE nLen = strlen( szDeclType );
+               HB_SIZE nAt;
+               HB_USHORT ui;
+               char szNum[ 3 ];
+               int iOverflow;
+
+               /* SQLite doesn't normally have field size limits,
+                * but column declarations are freeform - let's
+                * try some really stupid guesswork on schema...
+                */
+               if( ( nAt = hb_strAt( "(", 1, szDeclType, nLen ) ) != 0 )
+               {
+                  HB_SIZE nIdx = 0;
+                  int nRetLen;
+
+                  for( ui = nAt; ui < nLen; ++ui )
+                  {
+                     if( nIdx > 1 || szDeclType[ ui ] == ')' ||
+                         szDeclType[ ui ] == ',' )
+                        break;
+
+                     if( HB_ISDIGIT( szDeclType[ ui ] ) && ( nIdx > 0 ||
+                         ( nIdx == 0 && szDeclType[ ui ] != '0' ) ) )
+                        szNum[ nIdx++ ] = szDeclType[ ui ];
+                  }
+                  szNum[ nIdx ] = '\0';
+
+                  if( ( nRetLen = hb_strValInt( szNum, &iOverflow ) ) > 0 )
+                     dbFieldInfo.uiLen = nRetLen;
+               }
+
+               if( dbFieldInfo.uiLen > 2 &&
+                   ( nAt = hb_strAt( ",", 1, szDeclType, nLen ) ) != 0 )
+               {
+                  for( ui = nAt; ui < nLen; ++ui )
+                  {
+                     if( HB_ISDIGIT( szDeclType[ ui ] ) &&
+                         szDeclType[ ui ] != '0' )
+                     {
+                        int nDec;
+                        szNum[ 0 ] = szDeclType[ ui ];
+                        szNum[ 1 ] = '\0';
+                        if( ( nDec = hb_strValInt( szNum, &iOverflow ) ) > 0 )
+                        {
+                           dbFieldInfo.uiDec = HB_MIN( dbFieldInfo.uiLen - 1, nDec );
+                           /* SQL column declaration doesn't include space for
+                            * decimal separator, while xBase dbstruct needs it.
+                            */
+                           dbFieldInfo.uiLen++;
+                        }
+                        break;
+                     }
+                  }
+               }
+            }
+            hb_itemPutNDDec( pItem, 0.0, dbFieldInfo.uiDec );
+            break;
+         }
+#endif
 
          case HB_FT_ANY:
             dbFieldInfo.uiLen = 6;
@@ -486,9 +576,30 @@ static HB_ERRCODE sqlite3GoTo( SQLBASEAREAP pArea, HB_ULONG ulRecNo )
                pItem = hb_itemPutNDDec( NULL, sqlite3_column_double( st, ui ), pField->uiDec );
                break;
 
+#ifdef HB_SQLT3_MAP_DECLARED_EMULATED
+            case HB_FT_DATE:
+               if( sqlite3_column_bytes( st, ui ) >= 10 )
+               {
+                  char szDate[ 9 ];
+                  const char * pValue = ( const char * ) sqlite3_column_text( st, ui );
+
+                  szDate[ 0 ] = pValue[ 0 ];
+                  szDate[ 1 ] = pValue[ 1 ];
+                  szDate[ 2 ] = pValue[ 2 ];
+                  szDate[ 3 ] = pValue[ 3 ];
+                  szDate[ 4 ] = pValue[ 5 ];
+                  szDate[ 5 ] = pValue[ 6 ];
+                  szDate[ 6 ] = pValue[ 8 ];
+                  szDate[ 7 ] = pValue[ 9 ];
+                  szDate[ 8 ] = '\0';
+                  pItem = hb_itemPutDS( NULL, szDate );
+               }
+               break;
+#endif
             case HB_FT_BLOB:
                pItem = hb_itemPutCL( NULL, ( const char * ) sqlite3_column_blob( st, ui ), sqlite3_column_bytes( st, ui ) );
                break;
+
          }
 
          if( pItem )
