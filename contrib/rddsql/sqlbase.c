@@ -539,6 +539,7 @@ static HB_ERRCODE sqlbasePutValue( SQLBASEAREAP pArea, HB_USHORT uiIndex, PHB_IT
        ( HB_IS_NUMBER( pItem ) && ( pField->uiType == HB_FT_INTEGER || pField->uiType == HB_FT_LONG ||
                                     pField->uiType == HB_FT_FLOAT || pField->uiType == HB_FT_DOUBLE ) ) ||
        ( HB_IS_LOGICAL( pItem ) && pField->uiType == HB_FT_LOGICAL ) ||
+       pField->uiType == HB_FT_ANY ||
        HB_IS_NIL( pItem ) )
    {
       hb_arraySet( ( PHB_ITEM ) pArea->pRecord, uiIndex, pItem );
