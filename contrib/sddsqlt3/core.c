@@ -48,6 +48,7 @@
 
 #include "hbapiitm.h"
 #include "hbapistr.h"
+#include "hbapicdp.h"
 #include "hbdate.h"
 #include "hbset.h"
 #include "hbvm.h"
@@ -256,7 +257,8 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
    {
       HB_SIZE nLen = strlen( szDeclType );
       HB_SIZE nAt;
-      int iOverflow, iRetLen = 0;
+      int iOverflow;
+      HB_MAXINT iRetLen = 0;
 
       /* SQLite doesn't normally have field size limits,
        * but column declarations are freeform - let's
@@ -268,11 +270,16 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
          if( puiLen )
          {
             iRetLen = hb_strValInt( szDeclType + nAt, &iOverflow );
-            if( iRetLen > 0 && iRetLen < 100 )
+            if( ! puiDec || ( iRetLen > 0 && iRetLen < 100 ) )
                * puiLen = ( HB_USHORT ) iRetLen;
          }
 
-         if( puiDec && puiLen && * puiLen > 2 &&
+         if( ! puiDec )
+            return;
+
+         if( * puiLen < 2 )
+            * puiDec = 0;
+         else if( puiLen &&
              ( nAt = hb_strAt( ",", 1, szDeclType + nAt, nLen - nAt - 1 ) ) > 0 )
          {
             if( ( iRetLen = hb_strValInt( szDeclType + nAt, &iOverflow ) ) > 0 )
@@ -285,6 +292,8 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
 
                * puiLen = ( HB_USHORT ) ++iRetLen;
             }
+            else if( iRetLen == 0 )
+               * puiDec = 0;
          }
       }
    }
@@ -361,7 +370,7 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
    HB_ERRCODE     errCode;
    char *         szError;
    HB_BOOL        bError;
-   int            iStatus;
+   int            iStatus, result;
 
    pArea->pSDDData = memset( hb_xgrab( sizeof( SDDDATA ) ), 0, sizeof( SDDDATA ) );
    pSDDData        = ( SDDDATA * ) pArea->pSDDData;
@@ -369,7 +378,13 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
    pItem    = hb_itemPutC( NULL, pArea->szQuery );
    pszQuery = S_HB_ITEMGETSTR( pItem, &hQuery, &nQueryLen );
 
-   if( sqlite3_prepare_v2( pDb, pszQuery, ( int ) nQueryLen, &st, NULL ) != SQLITE_OK )
+#if SQLITE_VERSION_NUMBER >= 3020000
+   result = sqlite3_prepare_v3( pDb, pszQuery, ( int ) nQueryLen, 0, &st, NULL );
+#else
+   result = sqlite3_prepare_v2( pDb, pszQuery, ( int ) nQueryLen, &st, NULL );
+#endif
+
+   if( result != SQLITE_OK )
    {
       hb_strfree( hQuery );
       hb_itemRelease( pItem );
@@ -432,14 +447,21 @@ static HB_ERRCODE sqlite3Open( SQLBASEAREAP pArea )
       {
          case HB_FT_STRING:
          {
-            int iSize = sqlite3_column_bytes( st, uiIndex );
+            HB_SIZE nSize = hb_cdpUTF8StringLength( ( const char * ) sqlite3_column_text( st, uiIndex ),
+                                                    sqlite3_column_bytes( st, uiIndex ) );
+
+            /* sqlite3_column_bytes() returns variable lengths for UTF-8
+               strings - *_bytes16() UTF-16 could do that too, but not
+               for mostly used character sets. Yet seems better to use
+               hb_cdpUTF8StringLength() */
+
             char * pStr;
             HB_USHORT uiRetLen = 10;
 
 #ifdef HB_SQLT3_MAP_DECLARED_EMULATED
             sqlite3DeclStru( st, uiIndex, &uiRetLen, NULL );
 #endif
-            dbFieldInfo.uiLen = ( HB_USHORT ) HB_MAX( iSize, uiRetLen );
+            dbFieldInfo.uiLen = ( HB_USHORT ) HB_MAX( nSize, uiRetLen );
             pStr = ( char * ) hb_xgrab( ( HB_SIZE ) dbFieldInfo.uiLen + 1 );
             memset( pStr, ' ', dbFieldInfo.uiLen );
             hb_itemPutCLPtr( pItem, pStr, dbFieldInfo.uiLen );
