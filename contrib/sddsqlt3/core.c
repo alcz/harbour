@@ -280,7 +280,7 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
          if( * puiLen < 2 )
             * puiDec = 0;
          else if( puiLen &&
-             ( nAt = hb_strAt( ",", 1, szDeclType + nAt, nLen - nAt - 1 ) ) > 0 )
+                  ( nAt = hb_strAt( ",", 1, szDeclType + nAt, nLen - nAt - 1 ) ) > 0 )
          {
             if( ( iRetLen = hb_strValInt( szDeclType + nAt, &iOverflow ) ) > 0 )
             {
