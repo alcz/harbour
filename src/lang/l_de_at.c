@@ -130,7 +130,7 @@ static HB_LANG s_lang =
       "Nicht unterstützter VM OP-Code",                    /* Unsupported VM opcode */
       "Symbol-Eintrag erwartet von %s",                    /* Symbol item expected from %s */
       "Ungültiger Symbol-Typ für self von %s",             /* Invalid symbol type for self from %s */
-      "Codeblock erwartet von &s",                         /* Codeblock expected from %s */
+      "Codeblock erwartet von %s",                         /* Codeblock expected from %s */
       "Ungültiger Eintrags-Typ vom Stapel von %s geholt",  /* Incorrect item type on the stack trying to pop from %s */
       "Stapelspeicher Unterlauf",                          /* Stack underflow */
       "Ein Element kann nicht auf sich selbst kopiert werden: %s", /* An item was going to be copied to itself from %s */
