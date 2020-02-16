@@ -78,7 +78,7 @@ static HB_LANG s_lang =
       "Unzulässiges Zeichen in Alias", /* Illegal characters in alias */
       "Alias in Benutzung",            /* Alias already in use */
       "",
-      "Fehler bei Anlage",             /* Create error */
+      "Fehler beim Anlagen",             /* Create error */
       "Fehler beim Öffnen",            /* Open error */
       "Fehler beim Schließen",         /* Close error */
       "Lesefehler",                    /* Read error */
@@ -119,7 +119,7 @@ static HB_LANG s_lang =
       "Zu viele rekursive Aufrufe des Fehler-Handlers",    /* Too many recursive error handler calls */
       "RDD ungültig oder kann nicht geladen werden",       /* RDD invalid or failed to load */
       "Ungültiger Typ der Methode von %s",                 /* Invalid method type from %s */
-      "hb_xgrab erhält keine Speicherzuweisung",           /* hb_xgrab can't allocate memory */
+      "hb_xgrab konnte keinen Speicher reservieren",       /* hb_xgrab can't allocate memory */
       "hb_xrealloc wurde mit NULL-Zeiger aufgerufen",      /* hb_xrealloc called with a NULL pointer */
       "hb_xrealloc wurde mit ungültiger Zeiger-Adresse aufgerufen", /* hb_xrealloc called with an invalid pointer */
       "hb_xrealloc erhält keine erneute Speicherzuweisung",         /* hb_xrealloc can't reallocate memory */
@@ -131,10 +131,10 @@ static HB_LANG s_lang =
       "Symbol-Eintrag erwartet von %s",                    /* Symbol item expected from %s */
       "Ungültiger Symbol-Typ für self von %s",             /* Invalid symbol type for self from %s */
       "Codeblock erwartet von %s",                         /* Codeblock expected from %s */
-      "Ungültiger Eintrags-Typ vom Stapel von %s geholt",  /* Incorrect item type on the stack trying to pop from %s */
+      "Ungültiger Eintrags-Typ beim Holen von Stapel %s",  /* Incorrect item type on the stack trying to pop from %s */
       "Stapelspeicher Unterlauf",                          /* Stack underflow */
       "Ein Element kann nicht auf sich selbst kopiert werden: %s", /* An item was going to be copied to itself from %s */
-      "Ungültiger Symbol-Eintrag als MEMVAR von %s übergeben", /* Invalid symbol item passed as memvar %s */
+      "Ungültiger Symbol-Eintrag als MEMVAR %s übergeben", /* Invalid symbol item passed as memvar %s */
       "Pufferspeicher Überlauf",                            /* Memory buffer overflow */
       "hb_xgrab erfordert Zuweisung von 0 Bytes",           /* hb_xgrab requested to allocate zero bytes */
       "hb_xrealloc erfordert eine neue Größe von 0 Bytes",  /* hb_xrealloc requested to resize to zero bytes */
