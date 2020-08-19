@@ -1814,13 +1814,17 @@ static HB_BOOL hb_gt_def_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
       case HB_GTI_ALTENTER:
       case HB_GTI_ISFULLSCREEN:
       case HB_GTI_ISGRAPHIC:
-      case HB_GTI_ISSCREENPOS:
-      case HB_GTI_KBDSUPPORT:
       case HB_GTI_ISCTWIN:
       case HB_GTI_ISMULTIWIN:
       case HB_GTI_ISUNICODE:
          pInfo->pResult = hb_itemPutL( pInfo->pResult, HB_FALSE );
          break;
+
+      case HB_GTI_ISSCREENPOS:
+      case HB_GTI_KBDSUPPORT:
+      case HB_GTI_ONLINE:
+         pInfo->pResult = hb_itemPutL( pInfo->pResult, pGT->pCargo && hb_itemGetL( pGT->pCargo ) );
+         break
 
       case HB_GTI_KBDSHIFTS:
          pInfo->pResult = hb_itemPutNI( pInfo->pResult, 0 );
