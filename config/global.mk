@@ -1593,6 +1593,10 @@ ifneq ($(HB_HOST_PLAT)$(HB_HOST_CPU),$(HB_PLATFORM)$(HB_CPU))
       else
       ifeq ($(HB_PLATFORM),aix)
          HB_PRGFLAGS += -D__PLATFORM__AIX -D__PLATFORM__UNIX
+      else
+      ifeq ($(HB_PLATFORM),abstr)
+         HB_PRGFLAGS += -D__PLATFORM__LINUX -D__PLATFORM__UNIX
+      endif
       endif
       endif
       endif
