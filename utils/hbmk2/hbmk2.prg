@@ -165,7 +165,7 @@ EXTERNAL HB_GT_CGI_DEFAULT
    EXTERNAL HB_GT_DOS
 #elif defined( __PLATFORM__OS2 )
    EXTERNAL HB_GT_OS2
-#elif defined( __PLATFORM__UNIX ) .AND. ! defined( __PLATFORM__VXWORKS ) .AND. ! defined( __PLATFORM__SYMBIAN )
+#elif defined( __PLATFORM__UNIX ) .AND. ! defined( __PLATFORM__WEB ) .AND. ! defined( __PLATFORM__VXWORKS ) .AND. ! defined( __PLATFORM__SYMBIAN )
    EXTERNAL HB_GT_TRM
    #if defined( HBMK_WITH_GTXWC )
       EXTERNAL HB_GT_XWC
@@ -1891,8 +1891,8 @@ STATIC FUNCTION __hbmk( aArgs, nArgTarget, nLevel, /* @ */ lPause, /* @ */ lExit
          hbmk[ _HBMK_cGTDEFAULT ] := "gtstd"
          cBinExt := ".exe"
       CASE hbmk[ _HBMK_cPLAT ] == "abstr"
-         l_aLIBHBGT := { "gttrm" }
-         hbmk[ _HBMK_cGTDEFAULT ] := "gttrm"
+         l_aLIBHBGT := { "gtcgi" }
+         hbmk[ _HBMK_cGTDEFAULT ] := "gtcgi"
          DO CASE
          CASE hbmk[ _HBMK_cCOMP ] == "wasm"
             cBinExt := ".js"
@@ -11949,6 +11949,8 @@ STATIC PROCEDURE PlatformPRGFlags( hbmk, aOPTPRG )
       #elif defined( __PLATFORM__AIX )
          AAdd( aUn, "__PLATFORM__AIX" )
          AAdd( aUn, "__PLATFORM__UNIX" )
+      #elif defined( __PLATFORM__WEB )
+         AAdd( aUn, "__PLATFORM__WEB" )
       #endif
 
       #if   defined( __ARCH16BIT__ )
@@ -12026,6 +12028,12 @@ STATIC PROCEDURE PlatformPRGFlags( hbmk, aOPTPRG )
       CASE hbmk[ _HBMK_cPLAT ] == "aix"
          AAdd( aDf, "__PLATFORM__AIX" )
          AAdd( aDf, "__PLATFORM__UNIX" )
+      CASE hbmk[ _HBMK_cPLAT ] == "abstr"
+         AAdd( aDf, "__PLATFORM__AIX" )
+         AAdd( aDf, "__PLATFORM__UNIX" )
+         IF hbmk[ _HBMK_cCOMP ] == "wasm"
+            AAdd( aDf, "__PLATFORM__WEB" )
+         ENDIF
       ENDCASE
 
       /* Setup those CPU flags which we can be sure about.
@@ -15148,7 +15156,7 @@ STATIC FUNCTION __hbshell_gtDefault()
    RETURN "GTDOS"
 #elif defined( __PLATFORM__OS2 )
    RETURN "GTOS2"
-#elif defined( __PLATFORM__UNIX ) .AND. ! defined( __PLATFORM__VXWORKS ) .AND. ! defined( __PLATFORM__SYMBIAN )
+#elif defined( __PLATFORM__UNIX ) .AND. ! defined( __PLATFORM__WEB ) .AND. ! defined( __PLATFORM__VXWORKS ) .AND. ! defined( __PLATFORM__SYMBIAN )
    RETURN "GTTRM"
 #else
    RETURN _HBMK_GT_DEF_

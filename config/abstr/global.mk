@@ -6,4 +6,4 @@ ifeq ($(HB_COMPILER),wasm)
 endif
 DYN_PREF := lib
 
-HB_GT_LIBS += gttrm
+HB_GT_LIBS += gtcgi

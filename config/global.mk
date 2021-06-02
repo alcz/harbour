@@ -1596,6 +1596,10 @@ ifneq ($(HB_HOST_PLAT)$(HB_HOST_CPU),$(HB_PLATFORM)$(HB_CPU))
       else
       ifeq ($(HB_PLATFORM),abstr)
          HB_PRGFLAGS += -D__PLATFORM__LINUX -D__PLATFORM__UNIX
+         # we have no HB_PLATFORM=web, but it seems to be useful for .prg code
+         ifeq ($(HB_COMPILER),wasm)
+            HB_PRGFLAGS += -D__PLATFORM__WEB
+         endif
       endif
       endif
       endif
