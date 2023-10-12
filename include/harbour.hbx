@@ -248,6 +248,7 @@ DYNAMIC GUIReader
 DYNAMIC HardCR
 DYNAMIC HBCheckBox
 DYNAMIC HBClass
+DYNAMIC HBDefer
 DYNAMIC HBEditor
 DYNAMIC HBGetList
 DYNAMIC HBHash
@@ -1497,6 +1498,7 @@ DYNAMIC __HBArray
 DYNAMIC __HBBlock
 DYNAMIC __HBCharacter
 DYNAMIC __HBDate
+DYNAMIC __hbDeferInfo
 DYNAMIC __hbdoc_DirLastModified
 DYNAMIC __hbdoc_FilterOut
 DYNAMIC __hbdoc_FromSource
