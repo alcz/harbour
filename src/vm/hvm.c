@@ -12182,11 +12182,12 @@ HB_FUNC( __DBGVMVARSSET )
 
 HB_FUNC( __DBGPROCLEVEL )
 {
+   /* exposed for user mode implementation of DEFER, was internal: */
+#if 0
    if( hb_vmInternalsEnabled() )
-   {
-      HB_STACK_TLS_PRELOAD
-      hb_retnl( hb_dbg_ProcLevel() - 1 );   /* Don't count self */
-   }
+#endif
+   HB_STACK_TLS_PRELOAD
+   hb_retnl( hb_dbg_ProcLevel() - 1 );   /* Don't count self */
 }
 
 /*
