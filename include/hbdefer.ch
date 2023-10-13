@@ -2,7 +2,7 @@
  * Header file DEFER command for post-return expression (prototype)
  *
  * Copyright 2023 Aleksander Czajczynski <hb fki.pl>
- * Copyright 2023 dopslv
+ * Copyright 2023 Daniel Ortiz Pereira da Silva
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
