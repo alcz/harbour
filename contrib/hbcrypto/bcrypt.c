@@ -618,8 +618,8 @@ static void hb_blf_enc( hb_blf_ctx * c, HB_U32 * data, HB_U16 blocks )
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define BCRYPT_BLOCKS    8
-#define BCRYPT_HASHSIZE  ( BCRYPT_BLOCKS * 4 )
+#define BCRYPT_WORDS    8
+#define BCRYPT_HASHSIZE  ( BCRYPT_WORDS * 4 )
 
 static void bcrypt_hash( HB_U8 * sha2pass, HB_U8 * sha2salt, HB_U8 * out )
 {
@@ -631,7 +631,7 @@ static void bcrypt_hash( HB_U8 * sha2pass, HB_U8 * sha2salt, HB_U8 * out )
       'f', 'i', 's', 'h', 'S', 'w', 'a', 't',
       'D', 'y', 'n', 'a', 'm', 'i', 't', 'e' };
 
-   HB_U32 cdata[ BCRYPT_BLOCKS ];
+   HB_U32 cdata[ BCRYPT_WORDS ];
    int    i;
    HB_U16 j;
    HB_U16 shalen = HB_SHA512_DIGEST_SIZE;
@@ -647,14 +647,14 @@ static void bcrypt_hash( HB_U8 * sha2pass, HB_U8 * sha2salt, HB_U8 * out )
 
    /* encryption */
    j = 0;
-   for( i = 0; i < BCRYPT_BLOCKS; ++i )
+   for( i = 0; i < BCRYPT_WORDS; ++i )
       cdata[ i ] = hb_Blowfish_stream2word( ciphertext, sizeof( ciphertext ),
                                             &j );
    for( i = 0; i < 64; ++i )
-      hb_blf_enc( &state, cdata, sizeof( cdata ) / sizeof( HB_U64 ) );
+      hb_blf_enc( &state, cdata, sizeof( cdata ) / ( sizeof( HB_U64 ) ) );
 
    /* copy out */
-   for( i = 0; i < BCRYPT_BLOCKS; ++i )
+   for( i = 0; i < BCRYPT_WORDS; ++i )
    {
       out[ 4 * i + 3 ] = ( cdata[ i ] >> 24 ) & 0xff;
       out[ 4 * i + 2 ] = ( cdata[ i ] >> 16 ) & 0xff;
