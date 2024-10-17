@@ -626,7 +626,12 @@ char * hb_verPlatform( void )
          {
             osvi.dwMajorVersion = 10;
             osvi.dwMinorVersion = 0;
-            pszName = " 11 or newer";
+            if( hb_iswinver( 10, 0, VER_NT_WORKSTATION, HB_FALSE ) )
+               pszName = " 11 or newer";
+            else if( hb_iswinbuild( 26040, HB_TRUE ) )
+               pszName = " Server 2025";
+            else
+               pszName = " Server 23H2";
          }
          else if( hb_iswin10() )
          {
