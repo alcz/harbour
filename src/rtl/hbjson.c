@@ -48,6 +48,8 @@
 #include "hbapiitm.h"
 #include "hbapistr.h"
 #include "hbset.h"
+#include "hbvm.h"
+#include "hbstack.h"
 #include "hbjson.h"
 
 /*
@@ -145,8 +147,9 @@ static void _hb_jsonCtxAddIndent( PHB_JSON_ENCODE_CTX pCtx, HB_SIZE nLevel )
 
 static void _hb_jsonEncode( PHB_ITEM pValue, PHB_JSON_ENCODE_CTX pCtx,
                             HB_SIZE nLevel, HB_BOOL fEOL, PHB_CODEPAGE cdp,
-                            PHB_CODEPAGE cdpex )
+                            PHB_CODEPAGE cdpex, PHB_ITEM pConv )
 {
+   HB_BOOL bRawConv = HB_FALSE;
    /* Protection against recursive structures */
    if( ( HB_IS_ARRAY( pValue ) || HB_IS_HASH( pValue ) ) && hb_itemSize( pValue ) > 0 )
    {
@@ -177,7 +180,26 @@ static void _hb_jsonEncode( PHB_ITEM pValue, PHB_JSON_ENCODE_CTX pCtx,
       _hb_jsonCtxAdd( pCtx, pCtx->szEol, pCtx->iEolLen );
    }
 
-   if( HB_IS_STRING( pValue ) )
+   if( pConv && HB_IS_EVALITEM( pConv ) )
+   {
+      HB_STACK_TLS_PRELOAD
+      hb_vmPushEvalSym();
+      hb_vmPush( pConv );
+      hb_vmPushItemRef( pValue );
+      hb_vmSend( 1 );
+      bRawConv = hb_itemGetL( hb_stackReturnItem() );
+   }
+
+   if( bRawConv )
+   {
+      const char * szString = hb_itemGetCPtr( pValue );
+
+      if( szString )
+         _hb_jsonCtxAdd( pCtx, szString, hb_itemGetCLen( pValue ) );
+      else
+         _hb_jsonCtxAdd( pCtx, "null", 4 );
+   }
+   else if( HB_IS_STRING( pValue ) )
    {
       HB_SIZE nPos, nLen;
       const char * szString;
@@ -376,7 +398,7 @@ static void _hb_jsonEncode( PHB_ITEM pValue, PHB_JSON_ENCODE_CTX pCtx,
                     hb_itemSize( pItem ) > 0 ) )
                _hb_jsonCtxAddIndent( pCtx, ( nLevel + 1 ) );
 
-            _hb_jsonEncode( pItem, pCtx, nLevel + 1, HB_FALSE, cdp, cdpex );
+            _hb_jsonEncode( pItem, pCtx, nLevel + 1, HB_FALSE, cdp, cdpex, pConv );
          }
          if( pCtx->iIndent )
          {
@@ -417,7 +439,7 @@ static void _hb_jsonEncode( PHB_ITEM pValue, PHB_JSON_ENCODE_CTX pCtx,
                   _hb_jsonCtxAdd( pCtx, pCtx->szEol, pCtx->iEolLen );
                   _hb_jsonCtxAddIndent( pCtx, ( nLevel + 1 ) );
                }
-               _hb_jsonEncode( pKey, pCtx, nLevel + 1, HB_FALSE, cdp, cdpex );
+               _hb_jsonEncode( pKey, pCtx, nLevel + 1, HB_FALSE, cdp, cdpex, pConv );
 
                if( pCtx->iIndent )
                {
@@ -430,7 +452,7 @@ static void _hb_jsonEncode( PHB_ITEM pValue, PHB_JSON_ENCODE_CTX pCtx,
                   fEOL = HB_FALSE;
                }
 
-               _hb_jsonEncode( pItem, pCtx, nLevel + 1, fEOL, cdp, cdpex );
+               _hb_jsonEncode( pItem, pCtx, nLevel + 1, fEOL, cdp, cdpex, pConv );
             }
          }
          if( pCtx->iIndent )
@@ -714,7 +736,7 @@ static const char * _hb_jsonDecode( const char * szSource, PHB_ITEM pValue, PHB_
 
 /* C level API functions */
 
-char * hb_jsonEncodeCP( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent, PHB_CODEPAGE cdp, PHB_CODEPAGE cdpex )
+char * hb_jsonEncodeCP( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent, PHB_CODEPAGE cdp, PHB_CODEPAGE cdpex, PHB_ITEM pConv )
 {
    PHB_JSON_ENCODE_CTX pCtx;
    char * szRet;
@@ -731,7 +753,7 @@ char * hb_jsonEncodeCP( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent, PHB_CODEP
       pCtx->szEol = hb_conNewLine();
    pCtx->iEolLen = ( int ) strlen( pCtx->szEol );
 
-   _hb_jsonEncode( pValue, pCtx, 0, HB_FALSE, cdp, cdpex );
+   _hb_jsonEncode( pValue, pCtx, 0, HB_FALSE, cdp, cdpex, pConv );
    if( iIndent )
       _hb_jsonCtxAdd( pCtx, pCtx->szEol, pCtx->iEolLen );
 
@@ -747,7 +769,7 @@ char * hb_jsonEncodeCP( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent, PHB_CODEP
 
 char * hb_jsonEncode( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent )
 {
-   return hb_jsonEncodeCP( pValue, pnLen, iIndent, NULL, NULL );
+   return hb_jsonEncodeCP( pValue, pnLen, iIndent, NULL, NULL, NULL );
 }
 
 HB_SIZE hb_jsonDecodeCP( const char * szSource, PHB_ITEM pValue, PHB_CODEPAGE cdp )
@@ -808,7 +830,7 @@ HB_FUNC( HB_JSONENCODE )
    {
       HB_SIZE nLen;
       int iIndent = hb_parl( 2 ) ? INDENT_SIZE : hb_parni( 2 );
-      char * szRet = hb_jsonEncodeCP( pItem, &nLen, iIndent, _hb_jsonCdpPar( 3 ), _hb_jsonSrcCdpPar( 4 ) );
+      char * szRet = hb_jsonEncodeCP( pItem, &nLen, iIndent, _hb_jsonCdpPar( 3 ), _hb_jsonSrcCdpPar( 4 ), hb_param( 4, HB_IT_ANY ) );
       hb_retclen_buffer( szRet, nLen );
    }
 }
