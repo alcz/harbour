@@ -64,7 +64,9 @@
               by the caller.
 
       Harbour level functions:
-        hb_jsonEncode7Bit( xValue [, lHuman = .F. | nIndent = 0 ] ) --> cJSON
+        hb_jsonEncode7Bit( xValue [, lHuman = .F. | nIndent = 0 ]
+                         [, cTargetCP = NIL ] --> cJSON
+
  */
 
 typedef struct
