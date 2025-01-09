@@ -1740,12 +1740,10 @@ ifneq ($(HB_HOST_PLAT)$(HB_HOST_CPU),$(HB_PLATFORM)$(HB_CPU))
       ifeq ($(HB_PLATFORM),aix)
          HB_PRGFLAGS += -D__PLATFORM__AIX -D__PLATFORM__UNIX
       else
-      ifeq ($(HB_PLATFORM),abstr)
-         HB_PRGFLAGS += -D__PLATFORM__LINUX -D__PLATFORM__UNIX
-         # we have no HB_PLATFORM=web, but it seems to be useful for .prg code
-         ifeq ($(HB_COMPILER),wasm)
-            HB_PRGFLAGS += -D__PLATFORM__WEB
-         endif
+      ifeq ($(HB_PLATFORM),wasm)
+         HB_PRGFLAGS += -D__PLATFORM__LINUX -D__PLATFORM__UNIX -D__PLATFORM__WASM
+         # NOTE: __PLATFORM__LINUX here definitely is a hack, remove
+         # if WASM platform settles more (it's currently emscripten oriented)
       endif
       endif
       endif
