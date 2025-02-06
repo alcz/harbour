@@ -66,6 +66,10 @@
 
 #include "hbzebra.h"
 
+#if defined( __GNUC__ ) && __GNUC__ >= 12 && __GNUC__ <= 14
+   /* workaround for GCC bug */
+   #pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 /* Special CodeWords */
 #define PADDING               129
@@ -329,8 +333,6 @@ static void _datamatrix_do_placement( PHB_BITBUFFER pBits, unsigned char * pCW, 
    /* Calculate placement size without L-patterns and clock tracks */
    iPRow = pSize->iRow - 2 * ( pSize->iRow / pSize->iRegionRow );
    iPCol = pSize->iCol - 2 * ( pSize->iCol / pSize->iRegionCol );
-   if( iPCol < 0 )
-      iPCol = 0;
 
    pArr = ( int * ) hb_xgrab( sizeof( int ) * iPCol * iPRow );
    hb_xmemset( pArr, 0, sizeof( int ) * iPCol * iPRow );
