@@ -539,7 +539,7 @@ static size_t hb_curl_writefunction_callback( void * buffer, size_t size, size_t
    {
       hb_vmPushEvalSym();
       hb_vmPush( hb_curl->pWriteFunctionCallback );
-      hb_vmPushString( buffer, size * nmemb );
+      hb_vmPushString( ( const char * ) buffer, size * nmemb );
       hb_vmSend( 1 );
       hb_vmRequestRestore();
       return size * nmemb;
@@ -1692,9 +1692,11 @@ HB_FUNC( CURL_EASY_SETOPT )
             case HB_CURLOPT_MAXCONNECTS:
                res = curl_easy_setopt( hb_curl->curl, CURLOPT_MAXCONNECTS, hb_parnl( 3 ) );
                break;
+#if LIBCURL_VERSION_NUM < 0x080A00
             case HB_CURLOPT_CLOSEPOLICY: /* OBSOLETE, does nothing. */
                res = curl_easy_setopt( hb_curl->curl, CURLOPT_CLOSEPOLICY, hb_parnl( 3 ) );
                break;
+#endif
             case HB_CURLOPT_FRESH_CONNECT:
                res = curl_easy_setopt( hb_curl->curl, CURLOPT_FRESH_CONNECT, HB_CURL_OPT_BOOL( 3 ) );
                break;
@@ -2662,9 +2664,11 @@ HB_FUNC( CURL_WS_RECV )
 
 #if LIBCURL_VERSION_NUM >= 0x075600
       PHB_CURL hb_curl = PHB_CURL_par( 1 );
-
+#if LIBCURL_VERSION_NUM >= 0x080200
       const struct curl_ws_frame * meta = NULL;
-
+#else
+      struct curl_ws_frame * meta = NULL;
+#endif
       PHB_ITEM pBuffer = hb_param( 2, HB_IT_STRING );
       char *   buffer;
       HB_SIZE  buflen;
