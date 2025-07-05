@@ -4086,9 +4086,6 @@ STATIC FUNCTION __hbmk( aArgs, nArgTarget, nLevel, /* @ */ lPause, /* @ */ lExit
             cBin_CompC := iif( hbmk[ _HBMK_lCPP ] != NIL .AND. hbmk[ _HBMK_lCPP ], cBin_CompCPP, hbmk[ _HBMK_cCCPREFIX ] + "gcc" + hbmk[ _HBMK_cCCSUFFIX ] )
          ENDCASE
          cOpt_CompC := "-c"
-         IF hbmk[ _HBMK_cCOMP ] == "emcc"
-            cOpt_CompC += " -s WASM=1"
-         ENDIF
          IF hbmk[ _HBMK_lOPTIM ]
             cOpt_CompC += " -O3"
          ENDIF
@@ -4129,6 +4126,10 @@ STATIC FUNCTION __hbmk( aArgs, nArgTarget, nLevel, /* @ */ lPause, /* @ */ lExit
          ENDIF
          IF hbmk[ _HBMK_cPLAT ] == "minix"
             AAdd( hbmk[ _HBMK_aOPTC ], "-D_NETBSD_SOURCE=1" )
+         ENDIF
+         IF hbmk[ _HBMK_cPLAT ] == "wasm" .AND. hbmk[ _HBMK_cCOMP ] == "emcc"
+            AAdd( hbmk[ _HBMK_aOPTL ], "-sWASM=1" )
+            AAdd( hbmk[ _HBMK_aOPTD ], "-sWASM=1" )
          ENDIF
          cOpt_CompC += " {FC}"
          IF ! Empty( hbmk[ _HBMK_cWorkDir ] )

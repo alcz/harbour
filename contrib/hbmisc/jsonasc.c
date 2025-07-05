@@ -393,10 +393,12 @@ static char * hb_jsonEncodeCP7Bit( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent
    return szRet;
 }
 
+#if 0
 static char * hb_jsonEncode7Bit( PHB_ITEM pValue, HB_SIZE * pnLen, int iIndent )
 {
    return hb_jsonEncodeCP7Bit( pValue, pnLen, iIndent, NULL );
 }
+#endif
 
 /* Harbour level API functions */
 

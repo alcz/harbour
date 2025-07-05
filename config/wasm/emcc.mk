@@ -22,7 +22,7 @@ CC_IN :=
 # NOTE: The ending space after -o is important, please preserve it.
 CC_OUT := -o$(subst x,x, )
 
-CFLAGS += -s WASM=1 -I. -I$(HB_HOST_INC)
+CFLAGS += -I. -I$(HB_HOST_INC)
 ifeq ($(filter --analyze, $(HB_USER_CFLAGS)),)
    CFLAGS += -c
 endif
@@ -74,7 +74,7 @@ LD_OUT := -o$(subst x,x, )
 LIBPATHS := $(foreach dir,$(LIB_DIR) $(SYSLIBPATHS),-L$(dir))
 LDLIBS := $(foreach lib,$(HB_USER_LIBS) $(LIBS) $(SYSLIBS),-l$(lib))
 
-LDFLAGS += $(LIBPATHS)
+LDFLAGS += -sWASM=1 $(LIBPATHS)
 
 AR := $(LLVM_ROOT)/llvm-ar
 AR_RULE = ( $(AR) $(ARFLAGS) $(HB_AFLAGS) $(HB_USER_AFLAGS) rcs \
