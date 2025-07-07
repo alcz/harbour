@@ -4481,7 +4481,7 @@ STATIC FUNCTION __hbmk( aArgs, nArgTarget, nLevel, /* @ */ lPause, /* @ */ lExit
             cLibLibExt := ".a"
          ENDIF
          cImpLibExt := cLibLibExt
-         IF hbmk[ _HBMK_cCOMP ] == "clang" .AND. FindInPath( hbmk[ _HBMK_cCCPREFIX ] + "llvm-ar" + hbmk[ _HBMK_cCCEXT ] )
+         IF hbmk[ _HBMK_cCOMP ] == "clang" .AND. !( FindInPath( hbmk[ _HBMK_cCCPREFIX ] + "llvm-ar" + hbmk[ _HBMK_cCCEXT ] ) == NIL )
             /* new clang toolchains not always distribute llvm-ar (or it is renamed) */
             cBin_Lib := hbmk[ _HBMK_cCCPREFIX ] + "llvm-ar" + hbmk[ _HBMK_cCCEXT ]
          ELSEIF hbmk[ _HBMK_cCOMP ] == "tcc"
