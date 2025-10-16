@@ -1167,6 +1167,7 @@ HB_FUN_HB_VFREAD
 HB_FUN_HB_VFREADAT
 HB_FUN_HB_VFREADLEN
 HB_FUN_HB_VFRENAME
+HB_FUN_HB_VFSAVE
 HB_FUN_HB_VFSEEK
 HB_FUN_HB_VFSIZE
 HB_FUN_HB_VFTEMPFILE
@@ -2158,14 +2159,19 @@ hb_cdpTranslateDispChar
 hb_cdpU16AsStrLen
 hb_cdpU16CharToUTF8
 hb_cdpU16ToStr
+hb_cdpU32CharToUTF8
 hb_cdpUTF8AsStrLen
 hb_cdpUTF8CharSize
+hb_cdpUTF8GetU16
+hb_cdpUTF8GetU32
+hb_cdpUTF8GetUCS
 hb_cdpUTF8StringAt
 hb_cdpUTF8StringLength
 hb_cdpUTF8StringPeek
 hb_cdpUTF8StringSubstr
 hb_cdpUTF8ToStr
 hb_cdpUTF8ToU16NextChar
+hb_cdpUTF8Validate
 hb_cdpUpperWC
 hb_cdpcmp
 hb_cdpicmp
@@ -2519,6 +2525,7 @@ hb_fileRegisterFull
 hb_fileRegisterPart
 hb_fileRename
 hb_fileResult
+hb_fileSave
 hb_fileSeek
 hb_fileSize
 hb_fileSizeGet
