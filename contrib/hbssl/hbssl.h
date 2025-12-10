@@ -62,6 +62,18 @@
    #endif
 #endif
 
+/* following can be defined if MSYS/MinGW64 toolchain complains about lacking
+    '__int64' type inside OpenSSL project headers, also applink.c is not
+     needed on MinGW C runtime - therefore applink.c is not distributed there */
+#if defined( HB_OPENSSL_MSYS )
+   #ifdef __MINGW64__
+      #include <basetsd.h>
+   #endif
+   #if ! defined( HB_OPENSSL_NO_APPLINK )
+      #define HB_OPENSSL_NO_APPLINK
+   #endif
+#endif
+
 #include <openssl/ssl.h>
 
 #include "hbssl.ch"
@@ -224,6 +236,7 @@ extern void               hb_RSA_ret( RSA * rsa );
 
 extern HB_BOOL            hb_EVP_MD_is( int iParam );
 extern const EVP_MD *     hb_EVP_MD_par( int iParam );
+extern int                hb_EVP_MD_ptr_to_id( const EVP_MD * p );
 
 extern HB_BOOL            hb_EVP_CIPHER_is( int iParam );
 extern const EVP_CIPHER * hb_EVP_CIPHER_par( int iParam );
