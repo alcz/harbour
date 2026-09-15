@@ -149,11 +149,12 @@ Server side functions:
                  [<cPass>], [<nCompressionLevel>], [<nStrategy>] )
             --> <pConnectionSocket> | NIL
    netio_Compress( <pConnectionSocket>,
-                   [<cPass>], [<nCompressionLevel>], [<nStrategy>] ) --> NIL
-   netio_VerifyClient( <pConnectionSocket> ) --> <lAccepted>
-   netio_Server( <pConnectionSocket> ) --> NIL
-   netio_ServedConnection() --> <pConnectionSocket>
-   netio_RPC( <pListenSocket> | <pConnectionSocket> [, <lEnable>] ) --> <lPrev>
+                   [<cPass>], [<nCompressionLevel>], [<nStrategy>] ) -> NIL
+   netio_VerifyClient( <pConnectionSocket> ) -> <lAccepted>
+   netio_Server( <pConnectionSocket> ) -> NIL
+   netio_ServedConnection() -> <pConnectionSocket>
+   netio_RootPath( <pConnectionSocket> [, <cPath> ] ) -> <cPrevPath>
+   netio_RPC( <pListenSocket> | <pConnectionSocket> [, <lEnable>] ) -> <lPrev>
    netio_RPCFilter( <pConnectionSocket>,
                     <sFuncSym> | <hValue> | NIL ) --> NIL
    netio_ServerStop( <pListenSocket> | <pConnectionSocket> [, <lStop>] ) --> NIL

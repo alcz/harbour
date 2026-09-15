@@ -466,7 +466,11 @@ typedef HB_UCHAR            HB_U8;
 typedef HB_MAXINT    HB_VMMAXINT;
 typedef HB_MAXUINT   HB_VMMAXUINT;
 
-typedef HB_U32       HB_SYMCNT;
+#if defined( HB_SYMBOLS_SHORT )
+   typedef HB_U16       HB_SYMCNT;
+#else
+   typedef HB_U32       HB_SYMCNT;
+#endif
 
 #define HB_DBL_LIM_INT(d)     ( HB_VMINT_MIN <= (d) && (d) <= HB_VMINT_MAX )
 #define HB_DBL_LIM_LONG(d)    ( (HB_MAXDBL) HB_VMLONG_MIN <= (HB_MAXDBL) (d) && (HB_MAXDBL) (d) <= (HB_MAXDBL) HB_VMLONG_MAX )

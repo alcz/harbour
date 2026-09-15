@@ -931,6 +931,16 @@
     also targets WebAssembly, can be found here:
     https://github.com/alcz/harbour-cimgui-sokol-starterkit/
 
+2025-07-05 19:12 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * config/wasm/emcc.mk
+  * utils/hbmk2/hbmk2.prg
+    * "-s WASM=1" - this is a linker-only flag (now?). For those who are
+      wondering: in ASMJS mode, emscripten translates WASM to JS in
+      linker stage.
+
+  * contrib/hbmisc/jsonasc.c
+    % commented unused static func
+
 2025-03-25 13:54 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbcurl/core.c
     ! pacified warnings
@@ -941,7 +951,7 @@
 
 2025-03-20 06:30 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/cdpapihb.c
-    ! fixed hb_transalte() to not clear passed string
+    ! fixed hb_translate() to not clear passed string
       when neither CPIN nor CPOUT is set
 
   * src/rtl/hbgtcore.c
@@ -956,6 +966,13 @@
 2025-02-11 04:21 UTC+0100 Antonio Linares (alinares/at/fivetechsoft.com)
   * contrib/hbcurl/core.c
     + implemented required explicit cast reported by Lorenzo Fiorini
+
+2025-02-06 12:34 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/vm/extrap.c
+    ! Emscripten mimics UNIX/Linux to some extent, but there is no
+      sigaltstack() implementation
+
+  ; missing entry for a file that slipped in while merging
 
 2025-02-03 12:26 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * include/hbdefs.h
@@ -1560,6 +1577,25 @@
       about buggy ListBox:hitTest() on no-box dropdown in
       Cl*pper 5.3.
 
+2025-01-09 23:41 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  - config/abstr/global.mk
+  - config/abstr/libs.mk
+  - config/abstr/wasm.mk
+  + config/wasm/global.mk
+  + config/wasm/libs.mk
+  + config/wasm/emcc.mk
+    * extracted/renamed WASM platform out of abstract, {wasm} compiler
+      tag has been renamed to {emcc} - this based on emscripten toolchain
+
+  * config/global.mk
+  * utils/hbmk2/hbmk2.prg
+    * {abstr} was retained as hbmk2 keyword to possibly group all
+      toolsets similar in flavour: WASI/clang, JS/emscripten
+
+    * introduced __PLATFORM__WASM and __PLATFORM__ABSTRACT .prg defines
+
+    - deleted __PLATFORM__WEB
+
 2025-01-09 12:00 UTC+0100 Kamil Przybylski (kprzybylski quay.pl)
   * src/rtl/listbox.prg
     ! fixed nTop not being incremented in ListBox:hitTest() for no-box dropdown
@@ -1611,6 +1647,19 @@
   * src/rtl/fssize.c
     ! restore dynamic calling of GetFileAttributesEx() on
       Windows (significant only on very old systems)
+
+2025-01-06 11:23 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * include/hbjson.h
+  * src/rtl/hbjson.c
+  * ChangeLog.txt
+    ; reverted 7-bit (re)additions to core hb_jsonEncode(), if you
+      need to convert to codepage agnostic JSON use hbmisc lib:
+
+      hb_jsonEncode7Bit( <xValue>, [ <lHuman> | <nIndent> ],
+                         [ <cAltSrcCP> ] )
+
+  * contrib/hbmisc/jsonasc.c
+    * syntax comment updated
 
 2025-01-02 14:33 UTC+0100 Aleksander Czajczynski (hb fki.pl)
   * config/global.mk
@@ -1776,6 +1825,17 @@
     ! fixed issue hb_hscan when we are looking for a logical value as true.
       Many thanks to Marcos Gambeta who found the problem.
 
+2024-10-30 23:47 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbmisc/hbmisc.hbp
+  * contrib/hbmisc/hbmisc.hbx
+  + contrib/hbmisc/jsonasc.c
+    + reintroduced ability to output 7-bit safe
+      string, it's based on:
+      2015-11-30 14:56 UTC+0100 Przemyslaw Czerpak
+
+      hb_jsonEncode7Bit( <xValue>, [ <lHuman> | <nIndent> ],
+                         [ <cAltSrcCP> ] )
+
 2024-10-28 16:57 UTC+0100 Aleksander Czajczynski (hb fki.pl)
   * src/rdd/dbf1.c
     ! reading varchar binary field ("Q:B") from a .dbf
@@ -1787,10 +1847,12 @@
     ! return value of hb_zipDeleteFile() is not logical,
       fix by Grigory Filatov.
 
-2024-10-18 07:56 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+2024-10-17 23:09 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * src/common/hbver.c
     * guard Win10 build number getter from the unknown,
-      using old Win32 API that is not going to be deprecated.
+      using Win32 API that is not going to be deprecated.
+      At the same time we may know something about running
+      under not a MS system.
 
 2024-10-17 15:04 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * .github/workflows/windows-ci.yml
@@ -2063,6 +2125,35 @@
   * utils/hbmk2/hbmk2.prg
     ! fixed my last modification and check if HB_WITH_* contains
       non empty value
+
+2023-03-26 23:38 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbcrypto/3rd/ed25519/fixedint.h
+    ! NaCl toolchain includes stdint.h, but was not recognized
+
+2023-03-26 22:03 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbcrypto/bcrypt.c
+    ! fix clang warning or build failure (with -Werror)
+      error: expression does not compute the number
+      of elements in this array; element type is
+      'HB_U32' (aka 'unsigned int'), not 'HB_U64' (aka 'unsigned long')
+
+    * renamed BCRYPT_BLOCKS to BCRYPT_WORDS, per upstream openssh-portable:
+      bcrypt_pbkdf.c: bcrypt "blocks" are unrelated to blowfish blocks
+
+    ; more fixes possible from upstream
+
+2024-03-26 21:28 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/3rd/sqlite3/sqlite3.c
+    ! fix linking errors in final (single-threading) applications
+      at least with older MSVC compilers
+      _beginthreadex() symbol not found in single threading MSVC C runtime,
+      on the other hand sqlite3.lib we're building does not differentiate
+      between ST and MT
+
+    ; NOTE: sqlite3.diff was not rediffed here
+
+  * ChangeLog.txt
+    * simplified DEFER example
 
 2024-03-07 13:41 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/gtqtc/gtqtc.hbp
@@ -2413,6 +2504,33 @@
   * contrib/hbssl/hbssl.hbx
     + added new functions
 
+2023-11-20 17:14 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbcrypto/hbcrypto.hbp
+    * fix hbmk2's .hbx specifier after merge by Eric Lendvai
+  * ChangeLog.txt
+    * merged in hbcrypto related log entries from Harbour 3.4
+  * src/rtl/sha1.c
+  * src/rtl/sha1.h
+  * src/rtl/sha1hmac.c
+  * src/rtl/sha1hmac.h
+  * src/rtl/hbsha1.c
+  * src/rtl/hbsha1hm.c
+    * merged SHA1 cleanups from Harbour 3.4, many thanks Viktor
+
+2023-11-20 08:14 UTC-0800 Eric Lendvai (eric/at/lendvai.us)
+  + contrib/hbcrypto/*
+  * contrib/hbplist.txt
+  * contrib/hbrun/hbrun.hbp
+  * include/Makefile
+  * include/hbcrypto.h
+  * include/hbdefs.h
+  * package/harbour.spec
+  * src/rtl/sha2.c
+  * src/rtl/sha2hmac.c
+  * src/rtl/hbsha2hm.c
+  * src/rtl/hbsha2.c
+    + incorporated contrib/hbcrypto from Viktor Szakats repo
+
 2023-11-15 15:57 UTC+0100 Phil Krylov (phil a t krylov.eu)
   * contrib/hbsqlit3/tests/backup.prg
     + Simple change in test to provoke access to dangling pointer saved
@@ -2552,6 +2670,79 @@
 2023-10-29 14:27 UTC+0100 Enrico Maria Giordano (e.m.giordano@emagsoftware.it)
   * contrib/hbssl/hbssl.hbp
     ! added support for Openssl 3
+
+2023-10-13 21:35 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+   * ChangeLog.txt
+   * include/hbdefer.ch
+   * src/rtl/defer.prg
+     * credits, missing description
+
+2023-10-12 14:57 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+   * include/harbour.hbx
+   * src/harbour.def
+     ! satisfy linkers and/or hbrun for DEFER additions in the core
+
+2023-10-12 14:24 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+   + include/hbdefer.ch
+   + src/rtl/defer.prg
+   * src/rtl/Makefile
+     + added DEFER <exp> and DEFER FUNC <sym> commands, example:
+       ---
+         #include "hbdefer.ch"
+         #include "fileio.ch"
+         LOCAL nH := FCreate( "test" )
+         IF nH == F_ERROR
+              RETURN
+         ENDIF
+         DEFER FClose( nH )
+         FWrite( nH, Time() )
+       ---
+     ; thanks Daniel Ortiz Pereira da Silva for testing and contributing
+
+   * src/vm/hvm.c
+     * unprotect __dbgProcLevel() .prg func from
+       hb_vmInternalsEnabled() check for use within current
+       DEFER implementation
+
+   + include/hbproto.ch
+     + includes all prototypes of future/work-in-progress
+       language elements
+
+2023-09-28 14:26 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+   + include/hbunpack.ch
+     + added UNPACK command header file, inspired by one well widespread
+       programming language, example usage:
+       ---
+         #include "hbunpack.ch"
+         LOCAL p1, p2, p3, a
+         UNPACK p1, p2, p3 := { 1, 2, 3, 4, 5, 6 }
+         UNPACK p1, p2, p3 REST a := { 1, 2, 3, 4, 5, 6 }
+         ? p1, p2, p3 // 1, 2, 3
+         ? hb_valToExp( a ) // { 4, 5, 6 }
+       ---
+
+   + include/returnif.ch
+     + additional RETURN syntaxes for those who want to have quick oneliners
+       RETURN <retval> IF <expr> DO <pre_return>
+       RETURN <retval> IF <expr>
+       and shorter variants that return .F. - fitting negated ! <expr>
+       RETURN IF <expr> DO <pre_return>
+       RETURN IF <expr>
+
+       example of use:
+       RETURN IF ! Query() DO SQLRollback()
+
+2023-09-06 14:13 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rdd/dbcmd.c
+    ! clean-up multiple HB_FIELDPUT() implementations after auto-merging
+
+    * README.md
+      changed build badge to this repo GitHub Actions - Ubuntu 64-bit
+
+2023-09-06 13:40 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rtl/hbgtcore.c
+    ! make base GT/GTNUL actually return .T. HB_GTI_ONLINE, when there
+      is HB_GTI_CARGO value - missing commit msg(?)
 
 2023-07-07 00:07 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/vm/classes.c
@@ -2991,6 +3182,68 @@
          RETURN
       With above peace of code you can mix HBQT or other QT wrapper with GTQTC.
 
+2021-06-02 14:21 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * config/abstr/global.mk
+  * config/abstr/libs.mk
+  * config/global.mk
+  * utils/hbmk2/hbmk2.prg
+    * experiments with defining __PLATFORM__WEB for .prg code and making
+      the basic apps use GTCGI by default.
+      $ node hbmk2.js -> still references select() calls and doesn't output
+
+      $ node harbour.js -build
+      Harbour 3.2.0dev (r2106020940)
+      Copyright (c) 1999-2021, https://harbour.github.io/
+
+      Harbour Build Info
+      ---------------------------
+      Version: Harbour 3.2.0dev (r2106020940)
+      Compiler: LLVM/Clang C 11.0
+      Platform: Emscripten 1.0 x86-JS
+      [...]
+
+2021-06-02 11:40 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * config/abstr/wasm.mk
+    ! not an ultimate fix, but Emscripten/wasm doesn't seem to know -Og,
+      emits hard error
+
+2021-06-02 11:33 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  ! ChangeLog.txt
+    % EoL space...
+
+  * src/rtl/hbgtcore.c
+    ! fix missing ; after break
+
+2021-06-02 11:28 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  + config/abstr/global.mk
+  + config/abstr/libs.mk
+  + config/abstr/wasm.mk
+  * utils/hbmk2/hbmk2.prg
+  * contrib/hbrun/hbrun.hbp
+    + add basic support for build Harbour into JS/WebAssembly using
+      emscripten, using these settings:
+        HB_PLATFORM=abstr HB_COMPILER=wasm HB_BUILD_3RDEXT=no
+    ; platform/compiler names not final. [EXPERIMENTAL]
+
+  * utils/hbmk2/hbmk2.prg
+    + allow to specify hb_ProgName() value at build-time for platforms
+      where the function cannot return a meaningful value (f.e.
+      JS/WebAssembly)
+    ; TODO: Add support for passing hb_ProgName() value command-line
+            parameter, f.e. `--hb:self=hbrun`
+
+  * config/global.mk
+  * include/hbsetup.h
+    * consider abstract/emscripten targets similar to linux-like
+
+  * src/rtl/arc4.c
+    ! fix to build under emscripten (which is assumed to be a
+      linux-like environment)
+
+  ; this WebAssembly platform support was backported from Harbour 3.4
+    2017-06-09 01:10 UTC Viktor Szakats (vszakats users.noreply.github.com)
+    as usual Viktor was here before, many thanks!
+
 2021-04-28 20:02 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * include/hbgtinfo.ch
     ! fixed comment, Alt+Numpad HB_GTI_KBDALT workaround was disabled by
@@ -3198,6 +3451,12 @@
     * do not try to load image when zero length string is used as image name
       to refresh screen in HB_GTI_DISPIMAGE
 
+2020-05-20 09:32 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * include/hbdefs.h
+    + added C define HB_SYMBOLS_SHORT, that optionally reduces the maximum
+      symbols count back to 65535. Don't ever use this on 64-bit platforms,
+      but you can consider it for some embedded services.
+
 2020-04-20 15:01 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/gtqtc/gtqtc.hbp
     * added default Qt5 path in Ubuntu64
@@ -3319,6 +3578,25 @@
     + added German translations of error messages contributed
       by DF7BE - Wilfried Brunken. Contents have been slightly
       revised by Jan Fornoff.
+
+2020-02-16 20:13 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/lang/l_de_at.c
+    * duplicated l_de.c changes by Jan Fornoff
+
+2020-02-16 20:01 UTC+0100 Jan Fornoff (jfornoff users.noreply.github.com)
+  * src/lang/l_de.c
+    * DE internationalization optimizations
+
+2020-02-11 11:02 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/lang/l_de.c
+  * src/lang/l_de_at.c
+    ! fix invalid string format token
+
+2020-02-11 10:18 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/lang/l_de.c
+  * src/lang/l_de_at.c
+    + added German translations of error strings, contributed
+      by Wilfried DF7BE
 
 2020-02-10 15:34 UTC+0100 Aleksander Czajczynski (hb fki.pl)
   + src/codepage/cpde858.c
@@ -3558,34 +3836,23 @@
     * use -cpp=iso11 required for QT 5.7.0 or upper
     * extended QT detection and partial syncing with Viktor's branch
 
-2019-02-11 13:09 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+2019-02-11 12:00 UTC+0100 Aleksander Czajczynski (hb fki.pl)
   * contrib/sddsqlt3/core.c
-    ! fix DBUSEAREA() operation with SQLITE3 SDD to return empty result
-      when query conditions are false or the source table has no rows.
-
-      Previously an logically correct example caused RTE:
-      DBUSEAREA(,, "SELECT * FROM existing_table WHERE FALSE")
-
-    ! fix double-free error in sqLite3Disconnect(), looks like the
-      sqlite3_close() return value checking was reverted, SQLITE_OK is 0
-
-    * use CDP API to get UTF8 string length
-
     * use new sqlite3_prepare_v3() when built against
       sqlite 3.20.0 or upper (change borrowed from Viktor's 3.4 fork)
 
-    + add HB_SQLT3_MAP_DECLARED_EMULATED define (not yet enabled by default)
-      which make this SDD additionally parse SQLite column declarations.
-      Right now it can make HB_FT_DATE fields working using standard
-      ISO 8601 "yyyy-mm-dd" syntax. Also declarations not significant for
-      SQLite, but useful in xBase-style programming - SQL numeric(len,dec)
-      columns are detected in this mode and will be reflected in dbStruct().
+    * use CDP API to get UTF8 string length
 
-    + add support for alternative StoD() like syntax for HB_FT_DATE columns
+    ! quit looking for decimals when not needed, make zero decimal places
+      for very short fields
 
-    + add support for ISO 8601 "YYYY-MM-DD HH:MM:SS.FFF" timestamp declared
-      columns, SQLite stored strings are converted to proper HB_FT_TIMESTAMP
-      fields
+2019-02-10 21:31 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/sddsqlt3/core.c
+    ! fix double-free error in sqLite3Disconnect(), looks like the
+      sqlite3_close() return value checking was reverted, SQLITE_OK is 0
+
+    * refactored schema field length parsing to separate static function,
+      and reused it for string columns
 
     + added HB_SQLT3_FIELDNAME_STRICT define, which enables shortening
       of field to "name" if SQLite returns "table.name". Such fields are
@@ -3595,11 +3862,6 @@
       when working with specific SQL queries.
 
   * contrib/rddsql/sqlbase.c
-  * contrib/rddsql/sqlmix.c
-    + added ZAP functionality to SQLBASE and SQLMIX RDDs,
-      index tags are preserved while ZAP-ing SQLMIX area.
-      They are cleaned, no REINDEX is needed
-
     * changed to allow values of any type in "V" SIX3 / HB_FT_ANY fields
       in SQLBASE/SQLMIX RDD workareas
 
@@ -3607,6 +3869,31 @@
     ! fix InList() FoxPro compatible function not looking at the last
       parameter passed. Thanks to Attila Szabo for the information
       posted on the developers list.
+
+2019-02-03 23:15 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/sddsqlt3/core.c
+    ! trying to fix double-free error in sqLite3Disconnect, lightly tested
+
+    + add support for ISO 8601 "YYYY-MM-DD HH:MM:SS.FFF" timestamp declared
+      columns, SQLite stored strings are converted to proper HB_FT_TIMESTAMP
+      fields
+
+    + add support for alternative StoD() syntax for HB_FT_DATE columns
+
+2019-02-03 01:41 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/sddsqlt3/core.c
+    ! fix DBUSEAREA() operation with SQLITE3 SDD to return empty result
+      when query conditions are false or the source table has no rows.
+
+      Previously an logically correct example caused RTE:
+      DBUSEAREA(,, "SELECT * FROM existing_table WHERE FALSE")
+
+    + add HB_SQLT3_MAP_DECLARED_EMULATED define (enabled here by default)
+      which make this SDD additionally parse SQLite column declarations.
+      Right now it can make HB_FT_DATE fields working using standard
+      ISO 8601 "yyyy-mm-dd" syntax. Also declarations not significant for
+      SQLite, but useful in xBase-style programming - SQL numeric(len,dec)
+      columns are detected in this mode and will be reflected in dbStruct().
 
 2019-01-25 12:26 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/xhb/hbxml.c
@@ -3818,6 +4105,11 @@
   * src/vm/memvars.c
   * src/vm/strapi.c
     ! fixed compiler warnings emitted by GCC 7+
+
+2018-02-26 22:03 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/debug/dbgwa.prg
+  * ChangeLog.prg
+    ! minor reformatting of merged changes
 
 2018-02-23 15:15 UTC+0200 Alexey Myronenko (m.oleksa/at/ukr.net)
   * src/debug/dbgwa.prg
@@ -4197,6 +4489,11 @@
   * contrib/hbwin/win_svc_2.c
   * src/common/hbfopen.c
     ! fixed POCC and XCC builds
+
+2017-10-06 16:11 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.hbp
+  + contrib/hbcrypto/3rd/ed25519/add_scalar.c
+    + sync public API with upstream
 
 2017-09-28 15:11 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/pp/ppcore.c
@@ -5146,6 +5443,15 @@
     ! fixed possible use of memcpy() with the same source and destination
       addresses
 
+2017-05-15 15:28 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/_compat.h
+    ! fix to define `SIZE_MAX`. Required in certain Linux environments
+      Thanks to Aleksander Czajczyński for the patch.
+
+  * contrib/hbcrypto/hbcrypto.hbp
+  * contrib/rddads/rddads.hbp
+    ! respect `HB_BUILD_3RDEXT=no`
+
 2017-05-15 14:34 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbgs/hbgs.hbp
     ! respect HB_BUILD_3RDEXT=no
@@ -5320,6 +5626,10 @@
 2017-04-26 14:11 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/harbour.def
     ! added missing hb_itemPutNil()
+
+2017-04-25 19:10 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbnetio/hbnetio.hbx
+    * regenerated with netio_RootPath()
 
 2017-04-25 17:45 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * src/harbour.def
@@ -5512,7 +5822,15 @@
   * src/3rd/hbdossrl/serial.c
     ! fixed -Wshift-negative-value GCC warnings
 
-2017-04-14 13:22 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+2017-04-14 13:10 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbtip/hbtip.hbx
+    ! corrected casing of functions
+
+  + contrib/hbtip/WARNING.txt
+    + added document that discourages the use of hbtip contrib for anything
+      serious - it's based on file with the same name from Viktor's 3.4 fork
+
+2017-04-13 10:40 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * contrib/hbtip/ccgi.prg
   * contrib/hbtip/client.prg
   * contrib/hbtip/encb64.prg
@@ -5537,7 +5855,6 @@
   + contrib/hbtip/base64u.prg
   + contrib/hbtip/mailassy.prg
   * contrib/hbtip/sendmail.prg -> [...]/mailsend.prg
-  + contrib/hbtip/WARNING.txt
   * contrib/hbtip/tests/base64.prg
   * contrib/hbtip/tests/dbtohtml.prg
   * contrib/hbtip/tests/dnldftp.prg -> [...]/ftp_dl.prg
@@ -5554,7 +5871,9 @@
   + contrib/hbtip/tests/test.prg
   + contrib/hbtip/tests/url.prg
     * synced with 3.4 fork by Viktor Szakats
-    ; the only difference is slightly edited WARNING.txt
+    ; the only difference is that TIPClientHTTP:postMultiPart() doesn't
+      store whole attached files in memory variable, but send them directly
+      to the socket reusing TIPClient:writeFromFile() method
 
   - contrib/hbtip/credent.prg
     % deleted TIPCredentials() class that was never implemented
@@ -5562,12 +5881,46 @@
   ; changes above come from vast number of commits in 3.4 repository - many
     thanks to Viktor Szakats for maintaining
 
+2017-04-08 17:00 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbtip/client.prg
+    ! in TIPClient:WriteFromFile() set buffer size to Min( 65536, SND_BUF_SIZE )
+      otherwise FRead() may fail. After changing to VF file API it won't
+      be neccessary.
+
+  * contrib/hbtip/httpcli.prg
+    % changed TIPClientHTTP:PostMultiPart() to not buffer whole attached files
+      in memory variable, but sent them to the socket while reading the chunks.
+      It should be better for transferring some larger files.
+
 2017-04-06 12:05 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * contrib/hbtip/httpcli.prg
     ! fixed uploading binary files with TIPClientHTTP:PostMultiPart()
-      Thanks to Alexandre Alencar, who informed about the bug, supplied
-      example test code and suggested a patch. This commit simplifies patch
-      given by Alexandre.
+      Thanks to Alexandre Alencar, who informed about the bug, supplied example
+      test code and suggested a patch. This commit simplifies patch given
+      by Alexandre.
+
+2017-03-30 09:30 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbnetio/netiosrv.c
+    + added new server side function:
+         netio_RootPath( <pConnection> [, <cPath> ] ) -> <cPrevPath>
+      It gets or changes root path of the specfic file server connection.
+      When <cPath> is empty string ("") then the executable directory
+      will be used. If the <cPath> is NIL no file operations will be allowed.
+      This function can be used in conjuntion with RPC exposed routines
+      to form some kind of authetication resuting in different paths served
+      for different users.
+
+    * changed 3-rd parameter <cRootPath> in netio_MTServer() to behave like
+      in above function. It means that NIL setting will now block FS operations
+      by default. In previous revisions NIL resulted in setting executable
+      directory as root, now empty string ("") must be used. [INCOMPATIBLE]
+
+  * contrib/hbnetio/readme.txt
+    + added netio_RootPath() to the list
+
+  * contrib/hbnetio/tests/netiotst.prg
+  * contrib/hbnetio/tests/netiot03.prg
+    * use empty string ("") instead of NIL as root path
 
   * ChangeLog.txt
     % stripped spaces before EOLs
@@ -5708,6 +6061,16 @@
   * tests/speedtst.prg
     ! fixed memory statistic detection
 
+2017-03-21 18:25 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.diff
+  * contrib/hbcrypto/3rd/ed25519/ed25519.hbp
+  * contrib/hbcrypto/3rd/ed25519/ge.c
+  * contrib/hbcrypto/3rd/ed25519/key_exch.c -> contrib/hbcrypto/3rd/ed25519/key_exchange.c
+  * contrib/hbcrypto/3rd/ed25519/LICENSE.txt -> contrib/hbcrypto/3rd/ed25519/license.txt
+  * contrib/hbcrypto/3rd/ed25519/precompd.h -> contrib/hbcrypto/3rd/ed25519/precomp_data.h
+    * use original (non-short) filenames
+      to reduce local differences of vendored code
+
 2017-03-20 12:28 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbgs/core.c
     ! fixed to build with new GS versions - fix borrowed from Viktor's
@@ -5838,6 +6201,75 @@
     * updated April White email address
     ; please verify it and update if necessary
 
+2017-02-19 21:20 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/crypto_scrypt.h
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+    ! fix another C99 issue. Thanks to Alex Strickland.
+      Ref: https://github.com/vszakats/hb/issues/270#issuecomment-280947348
+
+2017-02-19 17:38 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/insecure_memzero.c
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  * contrib/hbcrypto/3rd/scrypt/sha256.h
+  + contrib/hbcrypto/3rd/scrypt/_compat.h
+    ! rework patch to make old MSVC versions (MSVC 2008) happy,
+      fixing another instance of C99-ism.
+      My last effort into this, from this point I'd like to kindly
+      ask for patches to support this compiler.
+
+2017-02-19 14:18 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/insecure_memzero.c
+  * contrib/hbcrypto/3rd/scrypt/insecure_memzero.h
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+    ! avoid another C99 #include <stdint.h>
+    ! replace 'inline' with _HB_INLINE_ and
+      make sure to #include "hbdef.h" before it.
+      Ref: https://github.com/vszakats/hb/issues/270#issuecomment-280918348
+
+2017-02-17 12:52 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * include/hbdefs.h
+    + add HB_C99_STATIC and HB_C99_RESTRICT type qualifiers
+      currently enabled for gcc/clang family
+
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+    % restore C99 static/restrict qualifiers on compilers that support it
+
+2017-02-17 12:24 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/crypto_scrypt.h
+    * cleanup
+
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  * contrib/hbcrypto/3rd/scrypt/sha256.h
+  * contrib/hbcrypto/hbcrypto.hbp
+    + make sha256.{c,h} compatible with C compilers not supporting C99
+      (untested though)
+      Ref: https://github.com/vszakats/hb/issues/270#issuecomment-280623411
+
+2017-02-13 12:34 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/scrypt.diff
+  * contrib/hbcrypto/3rd/scrypt/scrypt.hbp
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  + contrib/hbcrypto/3rd/scrypt/config.h
+  + contrib/hbcrypto/3rd/scrypt/insecure_memzero.c
+  + contrib/hbcrypto/3rd/scrypt/insecure_memzero.h
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.h -> contrib/hbcrypto/3rd/scrypt/crypto_scrypt.h
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.c -> contrib/hbcrypto/3rd/scrypt/crypto_scrypt-ref.c
+    * update to scrypt 1.2.1 (from 1.1.6)
+    * restore to use its own implementation of SHA256 and HMAC-SHA256
+      This makes patch smaller, final binaries somewhat smaller, but
+      this appears to be a more polished SHA256 implementation than
+      core one. WARNING: C build fallouts possible.
+    * use original filenames
+
+  * contrib/hbcrypto/hbcrypto.hbp
+    * use original scrypt public header filename in dependency detection.
+      This makes envvar HB_WITH_SCRYPT actually useful to point to
+      non-vendored scrypt package.
+
 2017-02-08 19:36 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/gtqtc/gtqtc1.cpp
     ! fixed clipboard selection with shift + left mouse button to not report
@@ -5863,6 +6295,10 @@
   * include/harbour.hbx
   * src/harbour.def
     * updated for new functions
+
+2017-01-31 15:07 UTC Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbrun/hbrun.hbp
+    + link hbcrypto lib by default
 
 2016-12-16 11:05 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbmisc/dates.c
@@ -6530,6 +6966,11 @@
       2015-09-02 18:43 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
       2015-04-03 11:43 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
       2014-01-29 02:15 UTC+0100 Viktor Szakats (vszakats users.noreply.github.com)
+
+2016-08-19 13:17 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/tests/pbkdf2.prg
+  * contrib/hbcrypto/tests/scrypt.prg
+    * update/add finalized RFC for test vectors
 
 2016-08-10 20:12 UTC+0300 Mindaugas Kavaliauskas (dbtopas/at/dbtopas.lt)
   * contrib/rddads/ads.ch
@@ -7370,6 +7811,19 @@
       corresponding types exist in core code and have their own name
       recognized by other RDDs.
       Now only one long type name can be returned: "CICHARACTER"
+
+2016-01-20 12:20 UTC+0100 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.dif
+  * contrib/hbcrypto/3rd/ed25519/fixedint.h
+    ! fix (hopefully) for msvc 2010 and above builds
+      Closes https://github.com/vszakats/hb/issues/170
+      Tests:
+         MSVC 2015: https://ci.appveyor.com/project/vszakats/hb/build/3.4.1004
+         MSVC 2013: https://ci.appveyor.com/project/vszakats/hb/build/3.4.1005
+    * remove old fix attempt
+
+  * contrib/hbcrypto/hbcrypto.hbp
+    + reenable for msvc
 
 2016-01-19 13:03 UTC+0100 Maurilio Longo (maurilio.longo@libero.it)
   - tests/longfile.prg
@@ -9199,6 +9653,35 @@
       raw sockets
     + implemented hb_fileFlush()
 
+2015-08-27 22:05 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.dif
+  * contrib/hbcrypto/3rd/ed25519/fixedint.h
+    ! fix build error with MSVC 2010. This compiler offers <stdint.h>
+      but it seems to miss type 'int32_t' anyway. This is a hack to
+      address this specific problem, it may need further updates
+      to form a general solution.
+      Fixes https://github.com/vszakats/hb/issues/158
+
+2015-08-24 19:05 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.c
+  * contrib/hbcrypto/3rd/scrypt/scrypt.dif
+    * eliminate reliance on 'errno' making this code
+      more portable (to wce e.g.)
+      Fixes https://github.com/vszakats/hb/issues/156
+
+2015-08-20 03:07 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  + contrib/hbcrypto/sha3.c
+  * contrib/hbcrypto/hbcrypto.hbp
+  * contrib/hbcrypto/hbcrypto.hbx
+  + contrib/hbcrypto/tests/sha3.prg
+    + add SHA3 functions:
+      hb_SHA3224( <cData>, [<lBinary=.F.>] ) -> <cHash>
+      hb_SHA3256( <cData>, [<lBinary=.F.>] ) -> <cHash>
+      hb_SHA3384( <cData>, [<lBinary=.F.>] ) -> <cHash>
+      hb_SHA3512( <cData>, [<lBinary=.F.>] ) -> <cHash>
+      hb_SHAKE128( <cData>, [<nHashBytes=32>], [<lBinary=.F.> ] ) -> <cHash>
+      hb_SHAKE256( <cData>, [<nHashBytes=64>], [<lBinary=.F.> ] ) -> <cHash>
+
 2015-08-17 15:39 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * include/hbznet.h
     + include hbsocket.h
@@ -9218,6 +9701,32 @@
 
   * contrib/hbtcpio/tcpio.c
     ! initialize socket subsystem - it fixes issue #105
+
+2015-08-08 14:50 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.dif
+  * contrib/hbcrypto/3rd/ed25519/fixedint.h
+    ! silence msvc64 (msvs 2015) redefinition warnings
+
+  * contrib/hbcrypto/blake2s.c
+    ! silence msvc64 warnings:
+      warning C4244: '+=': conversion from 'HB_SIZE' to 'HB_U32', possible loss of data
+
+2015-08-08 13:48 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/scrypt.c
+    ! fix extern declarations when built in C++ mode
+
+  * contrib/hbcrypto/3rd/ed25519/ed25519.dif
+  * contrib/hbcrypto/3rd/ed25519/fe.c
+    ! fix msvc64 warning:
+      warning C4146: unary minus operator applied to unsigned type, result still unsigned
+
+  * contrib/hbcrypto/bcrypt.c
+    ! fix msvc64 warnings:
+      warning C4267: 'argument': conversion from 'size_t' to 'HB_U16', possible loss of data
+
+  * src/rtl/sha1.c
+    * silence msvc warning:
+      conversion from 'HB_SIZE' to 'sha1_quadbyte', possible loss of data
 
 2015-08-07 16:07 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/filesys.c
@@ -9405,10 +9914,57 @@
     ! fixed bug with potentially uninitialized buffer
       (fix borrowed from Viktor's branch)
 
+2015-07-23 11:32 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/bcrypt.c
+    * silence msvc warning
+      Closes https://github.com/vszakats/hb/issues/145
+
 2015-07-20 17:02 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/gttrm/gttrm.c
     + added support for aixterm colors escape sequences.
       It can be enabled by //GTTRM:EXCLR=4
+
+2015-07-19 15:15 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  - contrib/hbcrypto/3rd/scrypt/sha256.h
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.c
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.h
+  * contrib/hbcrypto/3rd/scrypt/scrypt.dif
+  * contrib/hbcrypto/3rd/scrypt/scrypt.hbp
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  * contrib/hbcrypto/hbcrypto.hbp
+  * contrib/hbcrypto/pbkdf2.c
+    * use more Harbour types for better portability
+    * enable the contrib for all platforms
+
+  * contrib/hbcrypto/3rd/ed25519/ed25519.dif
+  * contrib/hbcrypto/3rd/ed25519/precompd.h
+  * contrib/hbcrypto/3rd/ed25519/sc.h
+    * add ending newlines to silence watcom warning
+
+2015-07-17 21:31 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/hbcrypto.hbp
+  * contrib/hbcrypto/hbcrypto.hbx
+  + contrib/hbcrypto/scryptcf.prg
+    + add helper function:
+        hb_scrypt_setup( <nOpsLimit>, <nMemLimit>, @<N>, @<r>, @<p> ) -> NIL
+
+2015-07-17 01:22 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/ed25519/ed25519.h
+  * contrib/hbcrypto/3rd/ed25519/sign.c
+    + add function ed25519_get_pubkey()
+      Related Issue: https://github.com/orlp/ed25519/issues/1
+      Related PR: https://github.com/orlp/ed25519/pull/5
+
+  * contrib/hbcrypto/ed25519.c
+  * contrib/hbcrypto/hbcrypto.hbx
+  * contrib/hbcrypto/tests/ed25519.prg
+    + add wrapper HB_ED25519_GET_PUBKEY() to derive
+      public key from secret key
+    * modify HB_ED25519_SIGN() and HB_ED25519_KEY_EXCHANGE()
+      to return value directly (was: by reference)
+
+  * contrib/hbcrypto/bcrypt.c
+    * cleanups
 
 2015-07-16 17:10 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/gttrm/gttrm.c
@@ -9439,15 +9995,97 @@
       Warning: I added above modes to test different terminals.
                It's possible that I'll change it after tests.
 
+2015-07-15 13:12 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  - contrib/hbcrypto/3rd/scrypt/config.h
+  - contrib/hbcrypto/3rd/scrypt/scrypt_p.h
+  - contrib/hbcrypto/3rd/scrypt/u_sysend.h
+  * contrib/hbcrypto/3rd/scrypt/c_scrypt.c
+  * contrib/hbcrypto/3rd/scrypt/scrypt.dif
+  * contrib/hbcrypto/3rd/scrypt/scrypt.hbp
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  * contrib/hbcrypto/hbcrypto.hbp
+    * rely more on Harbour macros and drop
+      redundant code
+
+  * contrib/hbcrypto/pbkdf2.c
+    ! do not strip 'const'
+
+  + contrib/hbcrypto/tests/pbkdf2.prg
+  * contrib/hbcrypto/tests/scrypt.prg
+    * split into two
+
 2015-07-14 17:51 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/gtxwc/gtxwc.c
     ! fixed SetMode() when HB_GTI_RESIZABLE is set to .F.
+
+2015-07-14 00:23 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/3rd/scrypt/scrypt.dif
+  * contrib/hbcrypto/3rd/scrypt/sha256.c
+  * contrib/hbcrypto/3rd/scrypt/sha256.h
+    % use core SHA256/HMAC implementations instead
+      of local duplicates
+
+  * src/rtl/hbsha2.c
+  * src/rtl/hbsha2hm.c
+    * minor cleanups
+
+2015-07-13 23:54 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * contrib/hbcrypto/ed25519.c
+  * contrib/hbcrypto/hbcrypto.hbp
+  * contrib/hbcrypto/hbcrypto.hbx
+  * contrib/hbcrypto/tests/ed25519.prg
+    * finalizing ed25519 functions
+
+2015-07-13 23:47 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  + contrib/hbcrypto/3rd/ed25519
+  + contrib/hbcrypto/ed25519.c
+  + contrib/hbcrypto/tests/ed25519.prg
+    + add ed25519 public-key signature functionality
+         https://ed25519.cr.yp.to
+      uses low-level code from:
+         https://github.com/orlp/ed25519
+
+  * contrib/hbcrypto
+    * merge hbblake2 into hbcrypto
+
+2015-07-13 23:12 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  * include/hbcrypto.h
+  * src/rtl/hbsha1.c
+  * src/rtl/hbsha1hm.c
+  * src/rtl/hbsha2.c
+  * src/rtl/hbsha2hm.c
+  * src/rtl/sha1.c
+  * src/rtl/sha1.h
+  * src/rtl/sha1hmac.c
+  * src/rtl/sha1hmac.h
+  * src/rtl/sha2.c
+  * src/rtl/sha2hmac.c
+    + use Harbour index type in low-level SHA code
+    % drop high-level hack compensating for fixed sized
+      low-level indexes in 64-bit builds
+    ! fix an unused variable in conditional code
+    ! fix a wrong header reference after prev updates
+
+2015-07-13 19:39 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  + include/hbcrypto.h
+  * include/Makefile
+  * src/rtl/sha2.c
+  * src/rtl/sha2hmac.c
+    + move sha2 and hmac/sha2 related headers to Harbour
+      header directory so they can be used by other components.
+    + export sha2 and hmac/sha2 low-level functions from Harbour dynlib
+    % use HB_ULL() macro instead of local replica in sha2.c
+    % drop unused #include <strings.h> from sha2.c and sha2hmac.c
 
 2015-07-03 11:22 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
   * include/harbour.hbx
   * src/rtl/libnamec.c
     + rename HB_LIBPOSTFIX() to HB_LIBSUFFIX()
       old name is still available, but deprecated.
+
+2015-06-28 18:24 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * ChangeLog.txt
+    * typo corrected
 
 2015-06-26 14:50 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/cdpapihb.c
@@ -9628,11 +10266,33 @@
   * contrib/xhb/xhbfunc.c
     ! fixed size of filename buffer - it should be exactly HB_PATH_MAX
 
+2015-05-07 22:24 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rdd/dbcmd.c
+    + added HB_FieldPut( <n>, <xVal> ) which is like FieldPut(), but
+      accepts NIL value as 2-nd parameter. FieldPut() ignores NIL and
+      shouldn't be changed, because of Clipper compatibility
+      and possible regressions.
+
+  * contrib/hbpgsql/tpostgre.prg
+    + added :SetNull( <lSet> ) to TPQServer class
+      and a param to :Query( <cQuery>, [ <lNull> ] )
+      TPQQuery class constructor is also extended.
+
+      With :SetNull( .T. ) retains NULL information as NIL. Standard
+      behaviour of hbpgsql library, until now, was to substitute NULL
+      as blank xBase value - thus :SetNull( .F. ) is the default setting.
+
 2015-05-07 13:27 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/itemseri.c
     ! fixed stupid typo which could cause buffer overrun during
       serialization of hash items with default value.
       Tanks to Abe for reporting the problem.
+
+2015-05-06 11:37 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbpgsql/hbpgsql.h
+  * contrib/hbpgsql/postgres.c
+  * contrib/hbpgsql/tpostgre.prg
+    + recognize NAMEOID and OIDOID columns
 
 2015-05-05 20:06 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/disksphb.c
@@ -9662,6 +10322,19 @@
     ! fixed typo in RDDI_AUTOORDER type - it should be numeric
       just like in  _SET_AUTORDER. Many thanks to Rolf for locating
       the problem
+
+2015-04-18 20:54 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/rddsql/sqlbase.c
+    * removed AREAP cast from prev
+
+  * contrib/rddsql/sqlmix.c
+    * index tags are now preserved while ZAP-ing SQLMIX area.
+      They are cleaned, no REINDEX is needed
+
+2015-04-16 23:31 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/rddsql/sqlbase.c
+    ! ZAP in SQLBASE - fix random GPF - previously i left a state
+      where ghost record item was released
 
 2015-04-09 00:20 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbnetio/netiosrv.c
@@ -9868,6 +10541,11 @@
       without authentication - it fixes timeout delay in such case
     ! do not create TIPClientSMTP() object twice when it's not necessary
     % small code simplification
+
+2015-03-13 16:39 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * contrib/hbwin/win_bmp.c
+    ! fix variable scope, win_LoadBitmapFile() code always returned empty
+      string after a10bfbda4058e19a1a2373993f6f491174677851
 
 2015-03-12 09:41 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbtip/sendmail.prg
@@ -10783,6 +11461,11 @@
 
   * tests/gtkeys.prg
     + added support for HB_K_MENU and HB_K_TERMINATE
+
+2015-01-13 13:38 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/common/hbver.c
+    ! corrected incomplete type definiton for older C compilers
+      introduced in 085e7eb3a5488585617f20b506c2b1c50d9d7028
 
 2015-01-09 19:19 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rdd/dbf1.c
@@ -12587,10 +13270,31 @@
     + allow to use GTNUL at runtime just like any other GT driver, i.e.
       creating dynamically new GT and use it as default thread GT.
 
+2014-06-05 19:15 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rtl/hbgtcore.c
+    * made hb_gtCreate() and hb_gtReload() calls compatible with
+      "vszHarbour" by Viktor Szakats after https://github.com/vszakats/harbour-core/commit/42a0cc24476e38ee8f54019cb8f6e2e7edab808a
+
+      hb_gtCreate() without parameter doesn't do anything in this version,
+      "NUL" and additionally "GTNUL" are supported. The same applies to
+      hb_gtReload().
+
+    - deleted one more occurrence of hb_stricmp( szGtName, "null" ) in
+      hb_gtLoad(). If i'm not mistaken, such variation isn't used anywhere
+      in Harbour codebase.
+
 2014-06-04 14:34 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/vm/classes.c
     ! added missing const to variable declaration in profiler code - problem
       reported by Ron Christie
+
+2014-06-03 22:59 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rtl/hbgtcore.c
+    * allow creating a GTNUL terminal with hb_gtCreate("NUL") or even without
+      parameters using HB_GTCREATE() alone. It was already possible, but only
+      once, with //gtnul command line parameter and may be useful in .prg-level
+      applications which use GTNUL as some kind of virtual terminal, f.e.
+      network terminal server.
 
 2014-05-29 02:04 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbmzip/mzip.c
@@ -12644,6 +13348,23 @@
   * src/debug/dbghelp.prg
     ! fixed number of help pages calculation
 
+2014-05-16 16:04 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rtl/hbgtcore.c
+    * store last mouse position in base GT structures.
+      This allows to use GTNUL driver itself with MSETPOS(), MROW(), MCOL()
+      functions. It may be useful in .prg-level applications which use GTNUL
+      as virtual terminal, f.e. network terminal server.
+
+2014-05-11 19:28 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  ; imported another tget.prg related fix, thanks!
+  ; https://github.com/vszakats/harbour-core/commit/d2151a4c89e644be2d7c0cce3af48aac0b487a83
+  ;
+  ; 2014-05-11 00:05 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  ;
+  ; * src/rtl/tget.prg
+  ;   ! fixed GET default PICTURE for TIMESTAMP type
+  ;     fixes https://github.com/harbour/core/issues/65
+
 2014-05-06 17:32 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/rtl/cdpapi.c
   * src/rtl/iousr.c
@@ -12673,6 +13394,58 @@
       places so it's possible that deeper tests can exploit them and
       we will have to cover them by HB_HELGRIND_FRIENDLY too just to
       easy detect real problems.
+
+2014-05-04 23:33 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/rtl/left.c
+    ; imported from Viktor Szakats fork (multiple commits there) - thanks
+
+    + added new function to replace "=" operator without the SET EXACT ambiguity
+      in its most common pattern of usage:
+         hb_LeftEq( <cString1>, <cString2> ) -> <lResult>
+         hb_LeftEqI( <cString1>, <cString2> ) -> <lResult>
+      it's equivalent to this expression, but faster and shorter:
+         ( Left( <cString1>, Len( <cString2> ) ) == <cString2> )
+
+2014-05-04 22:59 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  ; applied SET INTENSITY color compatibility fix with Clipper GETs
+  ; https://github.com/vszakats/harbour-core/commit/7fd9869de0b68e10279c63df16ca24e68b93c984
+  ;
+  ; 2014-04-22 02:35 UTC+0200 Viktor Szakats (vszakats users.noreply.github.com)
+  ; * src/rtl/tget.prg
+  ;   ! fixed GET colors when _SET_INTENSITY == .F.
+  ;
+  ; * tests/rto_get.prg
+  ;   + added regression tests for above
+  ;
+  ; * src/vm/set.c
+  ;   + added comment
+
+  * ChangeLog.txt
+    ! repeated word typo
+
+2014-05-04 22:08 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  ; applied SDDSQLT3 fix from Viktor Szakats fork - thanks
+  ; https://github.com/vszakats/harbour-core/commit/91890deb5e061dc9f9da0a2388a76b3916a7eab8
+  ;
+  ; 2013-11-08 21:43 UTC+0100 Viktor Szakats (vszakats users.noreply.github.com)
+  ; * contrib/sddsqlt3/core.c
+  ;   ! fixed missing first record of query
+
+2014-05-04 22:04 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * config/win/msvc.mk
+    ! there is no Platform SDK util detection mechanism. -nologo option
+      does not exist in SDK rc.exe
+
+  * utils/hbmk2/hbmk2.rc
+    ! Platform SDK rc.exe ver 5.2.3690.0 complains about .ico
+      file format (OLDDIB?)
+
+2014-05-04 21:23 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/rddsql/sqlmix.c
+    ! my previous attempt to recreate index tags after zapping SQLMIX
+      database failed, causing corruption and random GPFs. For now
+      let's fall back to ORDLSTCLEAR. It may be incompatible with
+      other RDDs.
 
 2014-04-11 17:36 UTC+0200 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/gtqtc/gtqtc.h
@@ -12812,6 +13585,11 @@
 
   ; Most of above modifications were critical for stability of MT programs.
     They should allow to activate GC in any place.
+
+2014-03-31 07:25 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * contrib/rddsql/sqlbase.c
+  * contrib/rddsql/sqlmix.c
+    + added ZAP functionality to SQLBASE and SQLMIX RDDs
 
 2014-03-27 16:13 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * contrib/hbpgsql/rddcopy.c
@@ -14227,6 +15005,31 @@
 
   * src/rtl/hbini.prg
     ! fixed RTE on 'include' directive
+
+2013-11-26 00:51 UTC+0100 Viktor Szakats (vszakats users.noreply.github.com)
+  + contrib/hbcrypto/3rd/scrypt/*
+  + contrib/hbcrypto/3rd/scrypt/scrypt.dif
+  + contrib/hbcrypto/3rd/scrypt/scrypt.hbc
+  + contrib/hbcrypto/3rd/scrypt/scrypt.hbp
+    + added 3rd party code from:
+         https://www.tarsnap.com/scrypt/
+      The work of Colin Percival, implementing safe password
+      hashing function scrypt and PBKDF2 which it depends on.
+      Plus Harbour build glue and patches to work with some
+      other compilers than gcc and better work with Harbour.
+
+  * contrib/hbplist.txt
+  + contrib/hbcrypto/pbkdf2.c
+  + contrib/hbcrypto/scrypt.c
+  + contrib/hbcrypto/strcmpc.c
+  + contrib/hbcrypto/tests/hbmk.hbm
+  + contrib/hbcrypto/tests/test.prg
+    + added hbcrypto package implementing following password
+      hashing wrapper functions:
+         hb_scrypt( <cPassword>, <cSalt>, <nCPU>, <nMem>, <nParallel>, <nKeyLen> ) -> <cKey>
+         hb_pbkdf2_sha256( <cPassword>, <cSalt>, <nCount>, <nKeyLen> ) -> <cKey>
+    + added function for length-constant time string comparison:
+         hb_strcmpc( <cString1>, <cString2> ) -> <lEqual>
 
 2013-11-25 23:23 UTC+0100 Przemyslaw Czerpak (druzus/at/poczta.onet.pl)
   * src/common/strwild.c

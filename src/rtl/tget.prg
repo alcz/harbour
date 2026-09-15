@@ -308,10 +308,10 @@ METHOD display() CLASS Get
        * The above code which can left cursor in the middle of shown screen
        * suggests that we shouldn't. If necessary please fix me.
        */
-      /*
+#if 0
       nRowPos := ::nCapRow
       nColPos := ::nCapCol + Len( cCaption )
-      */
+#endif
 
    ENDIF
 
@@ -605,6 +605,7 @@ METHOD overStrike( cChar ) CLASS Get
             IF ::nPos > ::nMaxEdit
                ::pos := ::FirstEditable()
             ENDIF
+
             ::cBuffer := Stuff( ::cBuffer, ::nPos, 1, cChar )
 
             ::lChanged := .T.
@@ -919,13 +920,15 @@ METHOD setColorSpec( cColorSpec ) CLASS Get
    IF HB_ISSTRING( cColorSpec )
 
 #ifdef HB_COMPAT_C53
-      ::cColorSpec := hb_NToColor( nClrUns := Max( hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_UNSELECTED ) ), 0 ) ) + ;
-                      "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ENHANCED ) ) ) != -1, nClrOth, nClrUns ) ) + ;
-                      "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_CAPTION  ) ) ) != -1, nClrOth, nClrUns ) ) + ;
-                      "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ACCEL    ) ) ) != -1, nClrOth, nClrUns ) )
+      ::cColorSpec := ;
+         hb_NToColor( nClrUns := Max( hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_UNSELECTED ) ), 0 ) ) + ;
+         "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ENHANCED ) ) ) != -1, nClrOth, nClrUns ) ) + ;
+         "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_CAPTION  ) ) ) != -1, nClrOth, nClrUns ) ) + ;
+         "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ACCEL    ) ) ) != -1, nClrOth, nClrUns ) )
 #else
-      ::cColorSpec := hb_NToColor( nClrUns := Max( hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_UNSELECTED ) ), 0 ) ) + ;
-                      "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ENHANCED ) ) ) != -1, nClrOth, nClrUns ) )
+      ::cColorSpec := ;
+         hb_NToColor( nClrUns := Max( hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_UNSELECTED ) ), 0 ) ) + ;
+         "," + hb_NToColor( iif( ( nClrOth := hb_ColorToN( hb_ColorIndex( cColorSpec, GET_CLR_ENHANCED ) ) ) != -1, nClrOth, nClrUns ) )
 #endif
 
    /* NOTE: CA-Cl*pper oddity. [vszakats] */
@@ -1042,21 +1045,22 @@ METHOD picture( cPicture ) CLASS Get
                   ::cPicMask := SubStr( cPicture, nAt + 1 )
                ENDIF
 
-               IF "D" $ ::cPicFunc
+               DO CASE
+               CASE "D" $ ::cPicFunc
 
                   ::cPicMask := Set( _SET_DATEFORMAT )
                   FOR EACH cChar IN "yYmMdD"
                      ::cPicMask := StrTran( ::cPicMask, cChar, "9" )
                   NEXT
 
-               ELSEIF "T" $ ::cPicFunc
+               CASE "T" $ ::cPicFunc
 
                   ::cPicMask := Set( _SET_TIMEFORMAT )
                   FOR EACH cChar IN "yYmMdDhHsSfF"
                      ::cPicMask := StrTran( ::cPicMask, cChar, "9" )
                   NEXT
 
-               ENDIF
+               ENDCASE
 
                IF ( nAt := At( "S", ::cPicFunc ) ) > 0
                   FOR nFor := nAt + 1 TO Len( ::cPicFunc )
@@ -1212,7 +1216,9 @@ METHOD PutMask( xValue, lEdit ) CLASS Get
             IF "E" $ cPicFunc
                cChar := iif( cChar == ",", ".", "," )
             ENDIF
+
             cBuffer := Stuff( cBuffer, nFor, 1, cChar )
+
          ENDIF
       NEXT
       IF ::lEdit .AND. Empty( xValue )
@@ -1353,9 +1359,10 @@ METHOD unTransform() CLASS Get
          CASE "L"
 
             cBuffer := Upper( cBuffer )
-            xValue := "T" $ cBuffer .OR. ;
-                      "Y" $ cBuffer .OR. ;
-                      hb_langMessage( HB_LANG_ITEM_BASE_TEXT + 1 ) $ cBuffer
+            xValue := ;
+               "T" $ cBuffer .OR. ;
+               "Y" $ cBuffer .OR. ;
+               hb_langMessage( HB_LANG_ITEM_BASE_TEXT + 1 ) $ cBuffer
             EXIT
 
          CASE "D"
@@ -1448,11 +1455,13 @@ METHOD badDate() CLASS Get
    IF ::hasFocus
       SWITCH ::type
       CASE "D"
-         RETURN ( xValue := ::unTransform() ) == hb_SToD() .AND. ;
-                !( ::cBuffer == Transform( xValue, ::cPicture ) )
+         RETURN ;
+            ( xValue := ::unTransform() ) == hb_SToD() .AND. ;
+            !( ::cBuffer == Transform( xValue, ::cPicture ) )
       CASE "T"
-         RETURN ( xValue := ::unTransform() ) == hb_SToT() .AND. ;
-                !( ::cBuffer == Transform( xValue, ::cPicture ) )
+         RETURN ;
+            ( xValue := ::unTransform() ) == hb_SToT() .AND. ;
+            !( ::cBuffer == Transform( xValue, ::cPicture ) )
       ENDSWITCH
    ENDIF
 
@@ -1948,18 +1957,17 @@ METHOD Init( nRow, nCol, bVarBlock, cVarName, cPicture, cColorSpec ) CLASS Get
       bVarBlock := iif( HB_ISSTRING( cVarName ), MemVarBlock( cVarName ), NIL )
    ENDIF
    IF cColorSpec == NIL
-      cColorSpec := SetColor()
 #ifdef HB_COMPAT_C53
       cColorSpec := ;
-         hb_ColorIndex( cColorSpec, iif( Set( _SET_INTENSITY ), CLR_UNSELECTED, CLR_STANDARD ) ) + "," + ;
-         hb_ColorIndex( cColorSpec, iif( Set( _SET_INTENSITY ), CLR_ENHANCED, CLR_STANDARD ) ) + "," + ;
-         hb_ColorIndex( cColorSpec, CLR_STANDARD ) + "," + ;
+         hb_ColorIndex( SetColor(), iif( Set( _SET_INTENSITY ), CLR_UNSELECTED, CLR_STANDARD ) ) + "," + ;
+         hb_ColorIndex( SetColor(), iif( Set( _SET_INTENSITY ), CLR_ENHANCED, CLR_STANDARD ) ) + "," + ;
+         hb_ColorIndex( SetColor(), CLR_STANDARD ) + "," + ;
          iif( IsDefColor(), iif( Set( _SET_INTENSITY ), "W+/N", "W/N" ), ;
-            hb_ColorIndex( cColorSpec, iif( Set( _SET_INTENSITY ), CLR_BACKGROUND, CLR_STANDARD ) ) )
+            hb_ColorIndex( SetColor(), iif( Set( _SET_INTENSITY ), CLR_BACKGROUND, CLR_STANDARD ) ) )
 #else
       cColorSpec := ;
-         hb_ColorIndex( cColorSpec, iif( Set( _SET_INTENSITY ), CLR_UNSELECTED, CLR_STANDARD ) ) + "," + ;
-         hb_ColorIndex( cColorSpec, iif( Set( _SET_INTENSITY ), CLR_ENHANCED, CLR_STANDARD ) )
+         hb_ColorIndex( SetColor(), iif( Set( _SET_INTENSITY ), CLR_UNSELECTED, CLR_STANDARD ) ) + "," + ;
+         hb_ColorIndex( SetColor(), iif( Set( _SET_INTENSITY ), CLR_ENHANCED, CLR_STANDARD ) )
 #endif
    ENDIF
 

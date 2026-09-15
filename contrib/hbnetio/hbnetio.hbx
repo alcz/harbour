@@ -37,6 +37,7 @@ DYNAMIC netio_OpenItemStream
 DYNAMIC netio_ProcExec
 DYNAMIC netio_ProcExecW
 DYNAMIC netio_ProcExists
+DYNAMIC netio_RootPath
 DYNAMIC netio_RPC
 DYNAMIC netio_RPCFilter
 DYNAMIC netio_ServedConnection

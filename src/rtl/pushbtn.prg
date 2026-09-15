@@ -134,7 +134,6 @@ METHOD select( nPos ) CLASS PushButton
       IF HB_ISNUMERIC( nPos )
 
          IF nPos == 32
-
             Inkey( 0.4 )
             DO WHILE nCurPos == 32
                nCurPos := Inkey( 0.1 )

@@ -31,7 +31,7 @@ PROCEDURE Main()
    SET EXCLUSIVE OFF
    rddSetDefault( "DBFCDX" )
 
-   pSockSrv := netio_MTServer( DBPORT,,, /* RPC */ .T., DBPASSWD )
+   pSockSrv := netio_MTServer( DBPORT,, "", /* RPC */ .T., DBPASSWD )
    IF Empty( pSockSrv )
       ? "Cannot start NETIO server !!!"
       WAIT "Press any key to exit..."

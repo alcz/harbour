@@ -62,6 +62,9 @@
 #define S_HB_ITEMPUTSTR( itm, str )              hb_itemPutStrUTF8( itm, str )
 #define S_HB_ITEMPUTSTRLEN( itm, str, len )      hb_itemPutStrLenUTF8( itm, str, len )
 
+#define HB_SQLT3_MAP_DECLARED_EMULATED
+#define HB_SQLT3_FIELDNAME_STRICT
+
 typedef struct
 {
    sqlite3 * pDb;

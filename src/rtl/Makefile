@@ -227,6 +227,7 @@ PRG_SOURCES := \
    checkbox.prg \
    color53.prg \
    dbedit.prg \
+   defer.prg \
    devoutp.prg \
    dircmd.prg \
    dirscan.prg \

@@ -1814,12 +1814,16 @@ static HB_BOOL hb_gt_def_Info( PHB_GT pGT, int iType, PHB_GT_INFO pInfo )
       case HB_GTI_ALTENTER:
       case HB_GTI_ISFULLSCREEN:
       case HB_GTI_ISGRAPHIC:
-      case HB_GTI_ISSCREENPOS:
-      case HB_GTI_KBDSUPPORT:
       case HB_GTI_ISCTWIN:
       case HB_GTI_ISMULTIWIN:
       case HB_GTI_ISUNICODE:
          pInfo->pResult = hb_itemPutL( pInfo->pResult, HB_FALSE );
+         break;
+
+      case HB_GTI_ISSCREENPOS:
+      case HB_GTI_KBDSUPPORT:
+      case HB_GTI_ONLINE:
+         pInfo->pResult = hb_itemPutL( pInfo->pResult, pGT->pCargo && hb_itemGetL( pGT->pCargo ) );
          break;
 
       case HB_GTI_KBDSHIFTS:
@@ -3226,16 +3230,14 @@ static int hb_gt_def_MouseCol( PHB_GT pGT )
 
 static void hb_gt_def_MouseGetPos( PHB_GT pGT, int * piRow, int * piCol )
 {
-   HB_SYMBOL_UNUSED( pGT );
-
-   *piRow = *piCol = 0;
+   *piRow = pGT->iMouseLastRow;
+   *piCol = pGT->iMouseLastCol;
 }
 
 static void hb_gt_def_MouseSetPos( PHB_GT pGT, int iRow, int iCol )
 {
-   HB_SYMBOL_UNUSED( pGT );
-   HB_SYMBOL_UNUSED( iRow );
-   HB_SYMBOL_UNUSED( iCol );
+   pGT->iMouseLastRow = iRow;
+   pGT->iMouseLastCol = iCol;
 }
 
 static void hb_gt_def_MouseSetBounds( PHB_GT pGT, int iTop, int iLeft, int iBottom, int iRight )

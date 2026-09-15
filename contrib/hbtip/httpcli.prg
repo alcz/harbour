@@ -500,9 +500,8 @@ METHOD PROCEDURE Attach( cName, cFileName, cType ) CLASS TIPClientHTTP
 METHOD PostMultiPart( xPostData, cQuery ) CLASS TIPClientHTTP
 
    LOCAL cData := "", item, cBound := ::boundary()
-   LOCAL cCrlf := ::cCRlf, aAttachment
-   LOCAL cFile, cType
-   LOCAL hFile, cBuffer, nRead
+   LOCAL cCrlf := ::cCRlf, aAttachment, aOut
+   LOCAL cFile, cType, nRead
 
    DO CASE
    CASE Empty( xPostData )
@@ -526,6 +525,19 @@ METHOD PostMultiPart( xPostData, cQuery ) CLASS TIPClientHTTP
       cData := xPostData
    ENDCASE
 
+   IF ! HB_ISSTRING( cQuery )
+      cQuery := ::oUrl:BuildQuery()
+   ENDIF
+
+   ::inetSendAll( ::SocketCon, "POST " + cQuery + " HTTP/1.1" + cCrlf )
+   ::StandardFields()
+
+   IF ! "Content-Type" $ ::hFields
+      ::inetSendAll( ::SocketCon, "Content-Type: multipart/form-data; boundary=" + ::boundary( 2 ) + cCrlf )
+   ENDIF
+
+   nRead := 0
+   aOut := Array( Len( ::aAttachments ) )
    FOR EACH aAttachment IN ::aAttachments
 
       cFile := hb_defaultValue( aAttachment[ 2 ], "" )
@@ -535,43 +547,48 @@ METHOD PostMultiPart( xPostData, cQuery ) CLASS TIPClientHTTP
          cType := "text/html"
       ENDIF
 
-      cData += cBound + cCrlf + ;
+      // { <cBeforeFile>, <nDataLen> }
+      aOut[ aAttachment:__enumIndex() ] := Array( 2 )
+
+      // build Content-Disposition for file
+      aOut[ aAttachment:__enumIndex() ][ 1 ] := cBound + cCrlf + ;
          "Content-Disposition: form-data; " + ;
          "name=" + '"' + hb_defaultValue( aAttachment[ 1 ], "unspecified" ) + '"' + "; " + ;
          "filename=" + '"' + hb_FNameNameExt( hb_DirSepToOS( cFile ) ) + '"' + cCrlf + ;
          "Content-Type: " + cType + cCrLf + ;
          cCrLf
 
-      IF ( hFile := hb_vfOpen( cFile, FO_READ ) ) != NIL
-         cBuffer := Space( 65536 )
-         DO WHILE ( nRead := hb_vfRead( hFile, @cBuffer, hb_Blen( cBuffer ) ) ) > 0
-            cData += hb_BLeft( cBuffer, nRead )
-         ENDDO
-         hb_vfClose( hFile )
-      ENDIF
+      nRead += hb_BLen( aOut[ aAttachment:__enumIndex() ][ 1 ] )
+      // if file is growing, then we're going to lie here
+      nRead += aOut[ aAttachment:__enumIndex() ][ 2 ] := hb_vfSize( cFile )
+      // each file also ends with line-feed before bonduary
+      nRead += hb_BLen( cCrlf )
 
-      cData += cCrlf
    NEXT
 
    cData += cBound + "--" + cCrlf
+   nRead += hb_BLen( cData )
 
-   IF ! HB_ISSTRING( cQuery )
-      cQuery := ::oUrl:BuildQuery()
-   ENDIF
-
-   ::inetSendAll( ::SocketCon, "POST " + cQuery + " HTTP/1.1" + ::cCRLF )
-   ::StandardFields()
-
-   IF ! "Content-Type" $ ::hFields
-      ::inetSendAll( ::SocketCon, "Content-Type: multipart/form-data; boundary=" + ::boundary( 2 ) + ::cCrlf )
-   ENDIF
-
-   ::inetSendAll( ::SocketCon, "Content-Length: " + hb_ntos( hb_BLen( cData ) ) + ::cCRLF )
+   ::inetSendAll( ::SocketCon, "Content-Length: " + hb_ntos( nRead ) + cCrlf + cCrLf )
    // End of header
-   ::inetSendAll( ::SocketCon, ::cCRLF )
 
-   IF ::inetErrorCode( ::SocketCon ) ==  0
-      ::inetSendAll( ::SocketCon, cData )
+   FOR EACH aAttachment IN ::aAttachments
+      cFile := aAttachment[ 2 ]
+      // if file length has changed, we fail, because Content-Length is invalid
+      IF aOut[ aAttachment:__enumIndex() ][ 2 ] <> hb_vfSize( cFile )
+         RETURN .F.
+      ENDIF
+      // send out Content-Disposition
+      ::inetSendAll( ::SocketCon, aOut[ aAttachment:__enumIndex() ][ 1 ] )
+      IF ! ::writeFromFile( cFile )
+         RETURN .F.
+      ENDIF
+      ::inetSendAll( ::SocketCon, cCrlf )
+   NEXT
+
+   ::inetSendAll( ::SocketCon, cData )
+
+   IF ::inetErrorCode( ::SocketCon ) == 0
       ::bInitialized := .T.
       RETURN ::ReadHeaders()
    ENDIF
