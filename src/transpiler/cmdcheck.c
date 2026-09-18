@@ -485,8 +485,20 @@ static const char * hb_compChkParseSwitch( HB_COMP_DECL, const char * szSwitch,
                case 'S':
                   HB_COMP_PARAM->iLanguage = HB_LANG_CSHARP;
                   szSwPtr += 2;
+                  switch( *szSwPtr )
+                  {
+                     case '0':
+                        ++szSwPtr;
+                        HB_COMP_PARAM->iLanguage = HB_LANG_CSHARP0;
+                        break;
+                     case '1':
+                        ++szSwPtr;
+                         /* fallthrough */
+                     default:
+                        HB_COMP_PARAM->iLanguage = HB_LANG_CSHARP;
+                        break;
+                  }
                   break;
-
                case 'F':
                   /* -GF: scan-only mode. Build the user-function
                      signature table and append to it; no codegen.

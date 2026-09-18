@@ -22,8 +22,10 @@
 
 HB_EXTERN_BEGIN
 
+#ifndef HB_FUNCTAB_PATH
 #define HB_FUNCTAB_PATH \
    "/Users/alexstrickland/dev/harbour-core/src/transpiler/hbfuncs.tab"
+#endif
 
 /* Returns the namespace prefix for szName (e.g., "HbRuntime"), or
    NULL if the function is not in the table or has no remap. */

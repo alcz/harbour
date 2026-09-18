@@ -40,8 +40,10 @@ HB_EXTERN_BEGIN
 
 /* Default path the loader reads from when no override has been set.
    Change this if the source tree moves. */
+#ifndef HB_REFTAB_PATH
 #define HB_REFTAB_PATH \
    "/Users/alexstrickland/dev/harbour-core/src/transpiler/hbreftab.tab"
+#endif
 
 /* Override the table path at runtime (set by `--reftab=<path>` on the
    command line). Pass NULL to clear. The override is applied to every
