@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The hbhpdf contrib library for transpiled Harbour code. The emitter
+       routes every name contrib/hbhpdf/hbhpdf.hbx lists to `HbHpdf.<name>`.
+       Real implementations live in HbHpdf.cs; HbHpdf.Stubs.cs holds a
+       NotImplementedException stub for every other name the application
+       calls, written by easipos-transpiled's scripts/gen_library_stubs.py. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <RootNamespace>HbHpdf</RootNamespace>
+    <AssemblyName>HbHpdf</AssemblyName>
+  </PropertyGroup>
+
+</Project>

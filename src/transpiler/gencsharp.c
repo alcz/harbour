@@ -3163,6 +3163,26 @@ static const char * hb_csOperatorStr( HB_EXPRTYPE type )
    which is both syntactically broken (`int` is reserved) and semantically
    wrong (no such method). Non-remapped functions (user code, prefix="-")
    keep their source case so IDE navigation stays useful. */
+/* The C# class a contrib library's functions live in: the library's
+   directory name with its first letter upper-cased, and the letter after
+   a leading "hb" too — hbwin -> HbWin, hbsqlit3 -> HbSqlit3, xhb -> Xhb.
+   Each library is its own project under src/transpiler/libraries/<lib>/
+   declaring `public static class <that name>`. */
+static const char * hb_csLibraryClass( const char * szLib, char * szBuf, HB_SIZE nBuf )
+{
+   HB_SIZE n = strlen( szLib );
+
+   if( n >= nBuf )
+      n = nBuf - 1;
+   memcpy( szBuf, szLib, n );
+   szBuf[ n ] = '\0';
+   if( n > 0 )
+      szBuf[ 0 ] = ( char ) HB_TOUPPER( ( HB_UCHAR ) szBuf[ 0 ] );
+   if( n > 2 && hb_strnicmp( szLib, "hb", 2 ) == 0 )
+      szBuf[ 2 ] = ( char ) HB_TOUPPER( ( HB_UCHAR ) szBuf[ 2 ] );
+   return szBuf;
+}
+
 static const char * hb_csFuncMap( const char * szName )
 {
    static char s_szBuf[ 128 ];
@@ -3913,15 +3933,28 @@ static void hb_csEmitExpr( PHB_EXPR pExpr, FILE * yyc, HB_BOOL fParen )
                }
                else if( szCanon )
                {
-                  /* Canonicalised names from hbx are always routed
-                     through HbRuntime. That sidesteps two collisions
-                     that a bare emit would hit: (1) names matching
-                     .NET BCL types (`Array`, `Type`, `Version`) cause
-                     CS1955 "not invocable member"; (2) hb_-prefixed
-                     runtime fns aren't globals in any namespace, so a
-                     bare `hb_bitAnd(...)` CS0103s. HbRuntime owns the
-                     cross-cutting implementation of both groups. */
-                  fprintf( yyc, "HbRuntime.%s", szCanon );
+                  /* Canonicalised names from hbx are always qualified.
+                     That sidesteps two collisions a bare emit would
+                     hit: (1) names matching .NET BCL types (`Array`,
+                     `Type`, `Version`) cause CS1955 "not invocable
+                     member"; (2) hb_-prefixed runtime fns aren't
+                     globals in any namespace, so a bare `hb_bitAnd(...)`
+                     CS0103s. A core Harbour name (include/*.hbx) goes
+                     to HbRuntime; a contrib library's name goes to that
+                     library's class — `HbWin.wapi_Sleep(...)`,
+                     `HbSqlit3.sqlite3_bind_int64(...)` — each library
+                     its own project under src/transpiler/libraries/<lib>/
+                     with its implementations and generated stubs. */
+                  const char * szLib = hb_hbxCanonLibrary( szCanon );
+                  if( szLib )
+                  {
+                     char szClass[ 64 ];
+                     fprintf( yyc, "%s.%s",
+                              hb_csLibraryClass( szLib, szClass, sizeof( szClass ) ),
+                              szCanon );
+                  }
+                  else
+                     fprintf( yyc, "HbRuntime.%s", szCanon );
                }
                else
                {
@@ -7108,6 +7141,98 @@ static void hb_csFreeClasses( HB_CS_CLASS * pList )
    }
 }
 
+/* ---- virtual / override -------------------------------------------------
+   Harbour dispatches a message on the receiver's own class, so a method
+   that redeclares an inherited one must be `override` in C#, never a
+   hide: through a TestSuite-typed reference Harbour calls
+   OrmTestSuite:New(), and C# would call TestSuite.New() (CS0108 on the
+   test suites' parameterless New()). Every class method is therefore
+   emitted `virtual`, and one an ancestor declares with the SAME C#
+   signature is emitted `override` instead. A redeclaration with
+   different parameters is an ordinary overload and needs neither, so
+   the comparison is exact — arity, varargs spread, per-slot ref /
+   nilable / type, and the return type — with anything unknown read as
+   `dynamic`, which is what the signature emission prints for it. */
+
+static HB_BOOL hb_csRowSigMatches( const char * szChild, const char * szAnc )
+{
+   int iChild = hb_refTabParamCount( s_pRefTab, szChild );
+   int iAnc   = hb_refTabParamCount( s_pRefTab, szAnc );
+   int i;
+
+   if( iAnc < 0 || iChild < 0 || iChild != iAnc )
+      return HB_FALSE;
+   if( ( hb_refTabIsVariadic( s_pRefTab, szChild ) ||
+         hb_refTabIsCalledVarargs( s_pRefTab, szChild ) ) !=
+       ( hb_refTabIsVariadic( s_pRefTab, szAnc ) ||
+         hb_refTabIsCalledVarargs( s_pRefTab, szAnc ) ) )
+      return HB_FALSE;
+   for( i = 0; i < iChild; i++ )
+   {
+      const HB_REFPARAM * pC = hb_refTabParam( s_pRefTab, szChild, i );
+      const HB_REFPARAM * pA = hb_refTabParam( s_pRefTab, szAnc, i );
+      const char * szC = ( pC && pC->szType ) ? pC->szType : "USUAL";
+      const char * szA = ( pA && pA->szType ) ? pA->szType : "USUAL";
+
+      if( hb_refTabIsRef( s_pRefTab, szChild, i ) !=
+          hb_refTabIsRef( s_pRefTab, szAnc, i ) )
+         return HB_FALSE;
+      if( hb_refTabIsNilable( s_pRefTab, szChild, i ) !=
+          hb_refTabIsNilable( s_pRefTab, szAnc, i ) )
+         return HB_FALSE;
+      if( hb_stricmp( szC, szA ) != 0 )
+         return HB_FALSE;
+   }
+   return HB_TRUE;
+}
+
+/* "override " when an ancestor class declares the identical signature,
+   else "virtual ". s_szCurrentClass / s_szCurrentFunc are the method's
+   own class and reftab key, set by the caller. */
+static const char * hb_csMethodInherit( const char * szMethod,
+                                        const char * szRetType,
+                                        HB_BOOL fProcedure )
+{
+   char szChildRet[ 128 ];
+   const char * szAnc;
+   int iDepth;
+
+   if( ! szMethod || ! *szMethod || ! s_pRefTab || ! *s_szCurrentClass )
+      return "virtual ";
+
+   hb_strncpy( szChildRet,
+               fProcedure ? "void"
+                          : ( szRetType ? hb_csTypeMap( szRetType ) : "dynamic" ),
+               sizeof( szChildRet ) - 1 );
+
+   szAnc = hb_refTabClassParent( s_pRefTab, s_szCurrentClass );
+   for( iDepth = 0; szAnc && *szAnc && iDepth < 16; iDepth++ )
+   {
+      char szMangled[ 256 ];
+      char szKey[ 256 ];
+
+      hb_snprintf( szMangled, sizeof( szMangled ), "%s__%s", szAnc, szMethod );
+      hb_strncpy( szKey, hb_refTabMethodKey( szAnc, szMangled ),
+                  sizeof( szKey ) - 1 );
+      if( hb_refTabParamCount( s_pRefTab, szKey ) >= 0 )
+      {
+         /* The nearest ancestor that declares the name decides: same
+            shape and return type is an override, anything else is a
+            hide the emitter leaves alone. */
+         if( hb_csRowSigMatches( s_szCurrentFunc, szKey ) )
+         {
+            const char * szAncRet = hb_refTabReturnType( s_pRefTab, szKey );
+            if( strcmp( szChildRet,
+                        szAncRet ? hb_csTypeMap( szAncRet ) : "dynamic" ) == 0 )
+               return "override ";
+         }
+         return "virtual ";
+      }
+      szAnc = hb_refTabClassParent( s_pRefTab, szAnc );
+   }
+   return "virtual ";
+}
+
 /* Emit a C# class method body */
 static void hb_csEmitMethodBody( PHB_AST_NODE pFunc, PHB_HFUNC pCompFunc,
                                   FILE * yyc, int iIndent )
@@ -7178,6 +7303,12 @@ static void hb_csEmitMethodBody( PHB_AST_NODE pFunc, PHB_HFUNC pCompFunc,
    }
    else
    {
+      fprintf( yyc, "%s",
+               hb_csMethodInherit( ( pFirstStmt &&
+                                     pFirstStmt->type == HB_AST_CLASSMETHOD )
+                                      ? pFirstStmt->value.asClassMethod.szName
+                                      : NULL,
+                                   szRetType, fProcedure ) );
       if( fProcedure )
       {
          fprintf( yyc, "void" );

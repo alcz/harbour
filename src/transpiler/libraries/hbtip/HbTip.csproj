@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The hbtip contrib library for transpiled Harbour code. The emitter
+       routes every name contrib/hbtip/hbtip.hbx lists to `HbTip.<name>`.
+       Real implementations live in HbTip.cs; HbTip.Stubs.cs holds a
+       NotImplementedException stub for every other name the application
+       calls, written by easipos-transpiled's scripts/gen_library_stubs.py. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <RootNamespace>HbTip</RootNamespace>
+    <AssemblyName>HbTip</AssemblyName>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The hbexpat contrib library for transpiled Harbour code. The emitter
+       routes every name contrib/hbexpat/hbexpat.hbx lists to `HbExpat.<name>`.
+       Real implementations live in HbExpat.cs; HbExpat.Stubs.cs holds a
+       NotImplementedException stub for every other name the application
+       calls, written by easipos-transpiled's scripts/gen_library_stubs.py. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>annotations</Nullable>
+    <RootNamespace>HbExpat</RootNamespace>
+    <AssemblyName>HbExpat</AssemblyName>
+  </PropertyGroup>
+
+</Project>
