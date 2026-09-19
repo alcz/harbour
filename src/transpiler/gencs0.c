@@ -249,6 +249,32 @@ static void hb_csEmitStubBody( FILE * yyc, int iIndent, HB_BOOL fVoid )
    fprintf( yyc, "}\n" );
 }
 
+/* The "untyped" twin of a typed declaration: same name, returns void,
+   and a single marker parameter of type HbVmStack (an enum declared once
+   in HbRuntime.cs: `public enum HbVmStack { Args }`) meaning "the actual
+   arguments sit on the Harbour VM stack", as in harbour -gc3 output.
+   The marker parameter keeps the signature distinct even for
+   parameterless originals (a plain `void Name()` would be CS0111 against
+   `Name()`), and needs no default so overload resolution never sees an
+   ambiguity with the typed overload. Body is a placeholder for the
+   future VM-driven code. */
+static void hb_csEmitVmStackOverload( FILE * yyc, int iIndent,
+                                      const char * szScope, HB_BOOL fStatic,
+                                      const char * szName )
+{
+   fprintf( yyc, "\n" );
+   hb_csEmitIndent( yyc, iIndent );
+   fprintf( yyc, "%s %svoid %s( HbVmStack _hbvm )\n", szScope,
+            fStatic ? "static " : "", szName );
+   hb_csEmitIndent( yyc, iIndent );
+   fprintf( yyc, "{\n" );
+   hb_csEmitIndent( yyc, iIndent + 1 );
+   fprintf( yyc, "/* placeholder: arguments sit on the Harbour VM stack"
+                 " (cf. harbour -gc3 output) */\n" );
+   hb_csEmitIndent( yyc, iIndent );
+   fprintf( yyc, "}\n" );
+}
+
 /* Emit the parameter list (between the parentheses) of a function or
    method. Returns HB_TRUE when the signature was widened to
    `params dynamic[] hbva`. Defaults are `= default` / `= null` only:
@@ -716,6 +742,7 @@ static void hb_csEmitMethodDecl( PHB_AST_NODE pFunc, PHB_HFUNC pCompFunc,
    hb_csEmitParams( yyc, pFunc, pCompFunc, szKey, HB_FALSE );
    fprintf( yyc, ")\n" );
    hb_csEmitStubBody( yyc, iIndent, fProcedure );
+   hb_csEmitVmStackOverload( yyc, iIndent, "public", HB_FALSE, szMethName );
 }
 
 /* ---- Class declaration ---- */
@@ -856,6 +883,7 @@ static void hb_csEmitClass( HB_CS_CLASS * pClass, FILE * yyc )
       }
       fprintf( yyc, ")\n" );
       hb_csEmitStubBody( yyc, 1, HB_FALSE );
+      hb_csEmitVmStackOverload( yyc, 1, szScope, HB_FALSE, szName );
    }
 
    /* METHOD implementations: signature + empty body */
@@ -930,7 +958,13 @@ static void hb_csEmitFuncDecl( PHB_AST_NODE pFunc, PHB_HFUNC pCompFunc,
    hb_csEmitStubBody( yyc, iIndent, fVoid );
 
    if( ! fIsMain )
+   {
       hb_csEmitShortOverload( yyc, pFunc, pCompFunc, szKey, iIndent );
+      hb_csEmitVmStackOverload( yyc, iIndent, "public", HB_TRUE,
+                                hb_csMangleStaticFunc( pFunc->value.asFunc.szName,
+                                                       szMangledBuf,
+                                                       sizeof( szMangledBuf ) ) );
+   }
 }
 
 /* ---- Main entry point ---- */
