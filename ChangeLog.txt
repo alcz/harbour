@@ -7,6 +7,15 @@
    Entries may not always be in chronological/commit order.
    See license at the end of file. */
 
+2026-10-22 15:23 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/compiler/hbmain.c
+    * partial sync with core/master
+    * test large frame realloc fix (issue #420)
+
+  * doc/en/langall.txt
+    + list missing codepage DE858 in hb_cdpSelect() doc entry
+      noticed by DF7BE - Wilfried Brunken in #416 - thanks!
+
 2025-10-16 15:34 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * utils/hbmk2/hbmk2.prg
     * updated approach to define __ARCH64BIT__ at .prg level when

@@ -117,8 +117,19 @@ int hb_compMainExt( int argc, const char * const argv[],
 
    if( szSource )
    {
+      const char * pszFileName = "{SOURCE}";
+      int i;
+      /* Look for file name if any */
+      for( i = 1; i < argc && ! HB_COMP_PARAM->fExit; i++ )
+      {
+         if( ! HB_ISOPTSEP( argv[ i ][ 0 ] ) )
+         {
+            pszFileName = argv[ i ];
+            break;
+         }
+      }
       iFileCount++;
-      iStatus = hb_compCompile( HB_COMP_PARAM, "{SOURCE}", szSource, iStartLine );
+      iStatus = hb_compCompile( HB_COMP_PARAM, pszFileName, szSource, iStartLine );
    }
    else
    {
@@ -1784,7 +1795,12 @@ static void hb_compOptimizeFrames( HB_COMP_DECL, PHB_HFUNC pFunc )
             /* more then 255 local variables,
              * make a room for HB_P_LARGE[V]FRAME
              */
-            hb_compGenPCode1( 0, HB_COMP_PARAM );
+#if 0
+            hb_compGenPCode1( 0, HB_COMP_PARAM ); /* didn't refer to pFunc! (issue #420) */
+#endif
+            if( ( pFunc->nPCodeSize - pFunc->nPCodePos ) < 1 )
+               pFunc->pCode = ( HB_BYTE * ) hb_xrealloc( pFunc->pCode, pFunc->nPCodeSize += HB_PCODE_CHUNK );
+            pFunc->nPCodePos++;
             memmove( pFunc->pCode + 4, pFunc->pCode + 3, pFunc->nPCodePos - 4 );
             pFunc->pCode[ 0 ] = HB_P_LARGEFRAME;
             pFunc->pCode[ 1 ] = HB_LOBYTE( iLocals );
