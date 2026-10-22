@@ -256,7 +256,7 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
    if( szDeclType != NULL )
    {
       HB_SIZE nLen = strlen( szDeclType );
-      HB_SIZE nAt;
+      HB_SIZE nAt, nAtComma;
       int iOverflow;
       HB_MAXINT iRetLen = 0;
 
@@ -277,12 +277,12 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
          if( ! puiDec )
             return;
 
-         if( * puiLen < 2 )
+         if( ! puiLen || * puiLen < 2 )
             * puiDec = 0;
          else if( puiLen &&
-                  ( nAt = hb_strAt( ",", 1, szDeclType + nAt, nLen - nAt - 1 ) ) > 0 )
+                  ( nAtComma = hb_strAt( ",", 1, szDeclType + nAt, nLen - nAt - 1 ) ) > 0 )
          {
-            if( ( iRetLen = hb_strValInt( szDeclType + nAt, &iOverflow ) ) > 0 )
+            if( ( iRetLen = hb_strValInt( szDeclType + nAt + nAtComma , &iOverflow ) ) > 0 )
             {
                * puiDec = ( HB_USHORT ) HB_MIN( * puiLen - 1, iRetLen );
 
@@ -290,7 +290,8 @@ static void sqlite3DeclStru( sqlite3_stmt * st, HB_USHORT uiIndex, HB_USHORT * p
                 * decimal separator, while xBase stores it.
                 */
 
-               * puiLen = ( HB_USHORT ) ++iRetLen;
+               * puiLen = ( HB_USHORT ) ( * puiLen + 1 );
+
             }
             else if( iRetLen == 0 )
                * puiDec = 0;
@@ -339,10 +340,10 @@ static HB_ERRCODE sqlite3Execute( SQLDDCONNECTION * pConnection, PHB_ITEM pItem 
    char **    pResult   = NULL;
    char *     pszErrMsg = NULL;
 
-   if( sqlite3_get_table( pDb, S_HB_ITEMGETSTR( pItem, &hStatement, NULL ), &pResult, &iRow, &iCol, &pszErrMsg ) != SQLITE_OK )
+   if( sqlite3_get_table( pDb, S_HB_ITEMGETSTR( pItem, &hStatement, NULL ), &pResult, &iRow, &iCol, NULL ) != SQLITE_OK )
    {
       hb_strfree( hStatement );
-      hb_xfree( sqlite3GetError( pDb, &errCode ) );
+      pszErrMsg = sqlite3GetError( pDb, &errCode );
       hb_errRT_SQLT3DD( EG_OPEN, ESQLDD_STMTALLOC, pszErrMsg, hb_itemGetCPtr( pItem ), errCode );
       hb_xfree( pszErrMsg );
       return HB_FAILURE;
@@ -552,7 +553,15 @@ static HB_ERRCODE sqlite3Close( SQLBASEAREAP pArea )
 
 static HB_ERRCODE sqlite3GoTo( SQLBASEAREAP pArea, HB_ULONG ulRecNo )
 {
-   sqlite3_stmt * st = ( ( SDDDATA * ) pArea->pSDDData )->pStmt;
+   sqlite3_stmt * st;
+
+   /* pSDDData not guaranteed to be allocated for DBCreate()'d areas, 
+      rest is guarded by fFetched = TRUE */
+
+   if( pArea->pSDDData )
+      st = ( ( SDDDATA * ) pArea->pSDDData )->pStmt;
+   else
+      st = NULL;
 
    while( ulRecNo > pArea->ulRecCount && ! pArea->fFetched )
    {
