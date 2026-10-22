@@ -7,6 +7,10 @@
    Entries may not always be in chronological/commit order.
    See license at the end of file. */
 
+2026-10-22 16:00 UTC+0200 Aleksander Czajczynski (hb fki.pl)
+  * src/compiler/hbmain.c
+    * sync with core/master + comment
+
 2026-10-22 15:23 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * src/compiler/hbmain.c
     * partial sync with core/master

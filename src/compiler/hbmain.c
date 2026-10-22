@@ -1796,11 +1796,13 @@ static void hb_compOptimizeFrames( HB_COMP_DECL, PHB_HFUNC pFunc )
              * make a room for HB_P_LARGE[V]FRAME
              */
 #if 0
-            hb_compGenPCode1( 0, HB_COMP_PARAM ); /* didn't refer to pFunc! (issue #420) */
+            hb_compGenPCode1( 0, HB_COMP_PARAM ); /* didn't refer to pFunc! (issue #420)
+                                                     also nPCodePos++ not needed after
+                                                      realloc: compensated by iOffset
+                                                   */
 #endif
             if( ( pFunc->nPCodeSize - pFunc->nPCodePos ) < 1 )
                pFunc->pCode = ( HB_BYTE * ) hb_xrealloc( pFunc->pCode, pFunc->nPCodeSize += HB_PCODE_CHUNK );
-            pFunc->nPCodePos++;
             memmove( pFunc->pCode + 4, pFunc->pCode + 3, pFunc->nPCodePos - 4 );
             pFunc->pCode[ 0 ] = HB_P_LARGEFRAME;
             pFunc->pCode[ 1 ] = HB_LOBYTE( iLocals );
