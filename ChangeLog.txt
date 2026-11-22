@@ -7,6 +7,11 @@
    Entries may not always be in chronological/commit order.
    See license at the end of file. */
 
+2026-11-22 19:45 UTC+0100 Aleksander Czajczynski (hb fki.pl)
+  * src/vm/hvm.c
+    * testing the fix for 64-bit int multiply on both operands
+      #404
+
 2026-10-22 16:00 UTC+0200 Aleksander Czajczynski (hb fki.pl)
   * src/compiler/hbmain.c
     * sync with core/master + comment
