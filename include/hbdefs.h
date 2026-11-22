@@ -473,7 +473,8 @@ typedef HB_MAXUINT   HB_VMMAXUINT;
 #endif
 
 #define HB_DBL_LIM_INT(d)     ( HB_VMINT_MIN <= (d) && (d) <= HB_VMINT_MAX )
-#define HB_DBL_LIM_LONG(d)    ( (HB_MAXDBL) HB_VMLONG_MIN <= (HB_MAXDBL) (d) && (HB_MAXDBL) (d) <= (HB_MAXDBL) HB_VMLONG_MAX )
+#define HB_DBL_LIM_LONG(d)    ( (HB_MAXDBL) HB_VMLONG_MIN <= (HB_MAXDBL) (d) && \
+                                (HB_MAXDBL) (d) < -( (HB_MAXDBL) HB_VMLONG_MIN ) )
 #define HB_LIM_INT(l)         ( HB_VMINT_MIN <= (l) && (l) <= HB_VMINT_MAX )
 #define HB_LIM_LONG(l)        ( HB_VMLONG_MIN <= (l) && (l) <= HB_VMLONG_MAX )
 
